@@ -1,5 +1,5 @@
 export default async function handler(req: any, res: any) {
-  const hash = req.query?.hash || req.url?.match(/\/google([a-f0-9]+)\.html/)?.[1] || "";
+  const hash = req.query?.hash || req.params?.hash || req.url?.match(/\/google([a-f0-9]+)\.html/)?.[1] || "";
   
   if (!hash) {
     return res.status(404).send("Verification hash not provided");

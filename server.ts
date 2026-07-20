@@ -27,9 +27,9 @@ import { runAssistantCommand } from "./services/assistant";
 import { runChatAI } from "./services/chat";
 import { moderateComment } from "./services/moderate";
 import { generateNewsDigest } from "./services/newsDigest";
-import newsDigestHandler from "./api/news-digest";
+import newsDigestHandler from "./server-api/news-digest";
 import { getLatestRates } from "./services/valas";
-import valasLatestHandler from "./api/valas/latest";
+import valasLatestHandler from "./server-api/valas/latest";
 import { slugify, injectSEOMetadata, injectGeneralSEOMetadata, generateSitemapXML, generateRobotsTxt } from "./services/seo";
 import { handleSEORouting } from "./server/middleware/seo";
 import {

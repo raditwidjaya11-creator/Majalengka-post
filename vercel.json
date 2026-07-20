@@ -3,7 +3,7 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "functions": {
-    "api/**/*.ts": {
+    "api/index.ts": {
       "includeFiles": "dist/**"
     }
   },
@@ -30,23 +30,27 @@
   "rewrites": [
     {
       "source": "/api/news/digest",
-      "destination": "/api/news-digest"
+      "destination": "/api/index"
     },
     {
       "source": "/robots.txt",
-      "destination": "/api/robots"
+      "destination": "/api/index"
     },
     {
       "source": "/sitemap.xml",
-      "destination": "/api/sitemap"
+      "destination": "/api/index"
     },
     {
       "source": "/google:hash.html",
-      "destination": "/api/google-verify?hash=:hash"
+      "destination": "/api/index?hash=:hash"
     },
     {
       "source": "/uploads/:filename",
-      "destination": "/api/uploads?filename=:filename"
+      "destination": "/api/index?filename=:filename"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "/api/index"
     },
     {
       "source": "/((?!api|assets|src|.*\\..*).*)",

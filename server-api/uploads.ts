@@ -4,7 +4,7 @@ import fs from "fs";
 
 export default async function handler(req: any, res: any) {
   try {
-    const { filename } = req.query;
+    const filename = req.query.filename || req.params.filename;
     if (!filename) {
       return res.status(400).send("Filename is required");
     }
