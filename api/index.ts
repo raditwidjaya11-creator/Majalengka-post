@@ -33,11 +33,42 @@ import { handleSEORouting } from "../server/middleware/seo.js";
 
 const app = express();
 
+// Restore original request URL from Vercel's rewrite headers to allow routing inside Express
+app.use((req, res, next) => {
+  const originalUrl = req.headers["x-forwarded-url"] || req.headers["x-matched-path"];
+  if (originalUrl) {
+    console.log(`Vercel Rewrite: Original URL restored from header to: ${originalUrl} (was: ${req.url})`);
+    req.url = String(originalUrl);
+  }
+  next();
+});
+
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 // Internal API routes mapping
 app.all("/api/health", healthHandler);
+app.all("/api/debug-fs", (req, res) => {
+  const safeReaddir = (dir: string) => {
+    try {
+      if (fs.existsSync(dir)) {
+        return fs.readdirSync(dir);
+      }
+      return ["Does not exist"];
+    } catch (err: any) {
+      return ["Error: " + err.message];
+    }
+  };
+  res.json({
+    cwd: process.cwd(),
+    dirname: __dirname,
+    rootFiles: safeReaddir(process.cwd()),
+    apiFiles: safeReaddir(path.join(process.cwd(), "api")),
+    distFiles: safeReaddir(path.join(process.cwd(), "dist")),
+    distAssetsFiles: safeReaddir(path.join(process.cwd(), "dist", "assets")),
+    vercelOutputFiles: safeReaddir(path.join(process.cwd(), ".vercel")),
+  });
+});
 app.all("/api/supabase/config", supabaseConfigHandler);
 app.all("/api/valas/latest", valasLatestHandler);
 app.all("/api/news/digest", newsDigestHandler);
@@ -94,18 +125,23 @@ app.all("*", async (req, res) => {
       path.join(__dirname, "..", "index.html")
     ];
 
+    const pathAttempts: string[] = [];
     for (const p of pathsToTry) {
       try {
-        if (fs.existsSync(p)) {
+        const exists = fs.existsSync(p);
+        pathAttempts.push(`${p} (${exists ? "EXISTS" : "MISSING"})`);
+        if (exists) {
           html = fs.readFileSync(p, "utf-8");
+          console.log(`Successfully loaded HTML template from: ${p}`);
           break;
         }
-      } catch (err) {
-        // Continue trying other paths
+      } catch (err: any) {
+        pathAttempts.push(`${p} (ERROR: ${err.message})`);
       }
     }
 
     if (!html) {
+      console.warn("Could not find index-template.html in any of the paths. Attempts: " + JSON.stringify(pathAttempts));
       html = `<!DOCTYPE html>
 <html lang="id">
 <head>
