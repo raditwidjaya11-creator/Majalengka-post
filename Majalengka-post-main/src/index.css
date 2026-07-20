@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+@layer utilities {
+  /* Marquee breaking news scroll animation */
+  @keyframes marquee {
+    0% {
+      transform: translate3d(0, 0, 0);
+    }
+    100% {
+      transform: translate3d(-100%, 0, 0);
+    }
+  }
+
+  .animate-marquee {
+    display: inline-block;
+    padding-left: 100%;
+    animation: marquee 35s linear infinite;
+  }
+
+  /* Fade-in transitions */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.35s ease-out forwards;
+  }
+
+  /* Custom scrollbar hider */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none !important;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
+  }
+}
+
+/* Global Scrollbar Hiding - Hapus Tampilan Scrollbar Tapi Tetap Bisa Di-scroll */
+::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+::-webkit-scrollbar-thumb {
+  background: transparent !important;
+}
+
+/* Support modern cross-browser scrollbar hiding (Firefox and IE/Edge) */
+* {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+/* Custom CSS variables fallback for dynamic themes */
+:root {
+  --primary-color: #DC2626;
+  --secondary-color: #991B1B;
+}
+
+.text-primary {
+  color: var(--primary-color) !important;
+}
+
+.bg-primary {
+  background-color: var(--primary-color) !important;
+}
+
+.border-primary {
+  border-color: var(--primary-color) !important;
+}
+
+/* ================= RESPONSIVE ARTICLE ARTICLE COMPLIANCE ================= */
+/* Make tables scrollable horizontally inside dynamically rendered markdown/article bodies */
+.prose table, .markdown-body table {
+  display: block;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  border-collapse: collapse;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Ensure all images inside dynamically rendered content scale within screen width */
+.prose img, .markdown-body img {
+  max-width: 100% !important;
+  height: auto !important;
+  border-radius: 0.75rem;
+  object-fit: cover;
+}
+
+/* Apply 1.8 line-height to the reading content of articles */
+.prose, .markdown-body, .prose p, .markdown-body p {
+  line-height: 1.8 !important;
+}

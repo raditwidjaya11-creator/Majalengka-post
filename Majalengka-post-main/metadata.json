@@ -1,0 +1,6 @@
+{
+  "name": "Majalengka Post News Portal",
+  "description": "Portal berita daerah Jawa Barat terpercaya terintegrasi dengan CMS redaksi cerdas, manajemen draf, analitik real-time, dan asisten AI.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

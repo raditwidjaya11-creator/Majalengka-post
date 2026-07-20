@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "functions": {
+    "api/**/*.ts": {
+      "includeFiles": "dist/**"
+    }
+  },
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(sw.js|manifest.json|favicon.ico|favicon.png|icon-192.png|icon-512.png|icon-maskable.png|apple-touch-icon.png)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/news/digest",
+      "destination": "/api/news-digest"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "/api/robots"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap"
+    },
+    {
+      "source": "/google:hash.html",
+      "destination": "/api/google-verify?hash=:hash"
+    },
+    {
+      "source": "/uploads/:filename",
+      "destination": "/api/uploads?filename=:filename"
+    },
+    {
+      "source": "/((?!api|assets|src|.*\\..*).*)",
+      "destination": "/api/index"
+    }
+  ]
+}
