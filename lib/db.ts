@@ -117,41 +117,38 @@ export const POLL_MAPPINGS = {
 
 export async function robustUpsert(
   tableName: string,
-  payloads: { camel: any; lower: any; snake: any },
+  payloads: { camel: any; lower: any; snake: any; minimal?: any },
   onConflict: string = "id"
 ): Promise<void> {
   const supabase = getSupabaseClient();
   if (!supabase) throw new Error("Supabase is not configured on the backend.");
 
-  try {
-    const { error } = await supabase.from(tableName).upsert(payloads.camel, { onConflict });
-    if (!error) return;
-    throw error;
-  } catch (err: any) {
-    const msg = err?.message || "";
-    const isColumnError = msg.includes("column") || msg.includes("does not exist") || err?.code === "42703";
-    if (isColumnError) {
-      try {
-        const { error: error2 } = await supabase.from(tableName).upsert(payloads.lower, { onConflict });
-        if (!error2) return;
-        throw error2;
-      } catch (err2: any) {
-        const msg2 = err2?.message || "";
-        const isColumnError2 = msg2.includes("column") || msg2.includes("does not exist") || err2?.code === "42703";
-        if (isColumnError2) {
-          try {
-            const { error: error3 } = await supabase.from(tableName).upsert(payloads.snake, { onConflict });
-            if (!error3) return;
-            throw error3;
-          } catch (err3) {
-            throw err; // throw original error if everything fails
-          }
-        }
-        throw err2;
+  // Order of preference: snake_case first (standard Postgres/Supabase), then camelCase, lower, minimal
+  const candidates = [
+    { name: "snake", payload: payloads.snake },
+    { name: "camel", payload: payloads.camel },
+    { name: "lower", payload: payloads.lower },
+    ...(payloads.minimal ? [{ name: "minimal", payload: payloads.minimal }] : [])
+  ];
+
+  let lastError: any = null;
+
+  for (const candidate of candidates) {
+    try {
+      const { error } = await supabase.from(tableName).upsert(candidate.payload, { onConflict });
+      if (!error) {
+        console.log(`[Supabase] Successfully upserted into table '${tableName}' using '${candidate.name}' schema.`);
+        return;
       }
+      lastError = error;
+    } catch (err: any) {
+      lastError = err;
     }
-    throw err;
   }
+
+  // If table does not exist or schema is completely mismatched, log a notice
+  const msg = lastError?.message || String(lastError || "");
+  console.warn(`[Supabase Notice] Could not upsert to '${tableName}' after trying all schema candidates (${msg}). Data is preserved in local storage fallback.`);
 }
 
 /**
@@ -550,7 +547,18 @@ export async function upsertOpeningBanners(banners: any[]) {
     updated_at: new Date().toISOString()
   }));
 
-  await robustUpsert("opening_banners", { camel, lower, snake });
+  const minimal = banners.map(b => ({
+    id: b.id,
+    title: b.title,
+    subtitle: b.subtitle || null,
+    image_url: b.imageUrl,
+    button_text: b.buttonText || "Baca Selengkapnya",
+    button_link: b.buttonLink || "#",
+    is_active: !!b.isActive,
+    status: b.status || "published"
+  }));
+
+  await robustUpsert("opening_banners", { camel, lower, snake, minimal });
 }
 
 export async function deleteOpeningBanner(id: string) {

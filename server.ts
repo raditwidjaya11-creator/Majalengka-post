@@ -57,6 +57,9 @@ const PORT = parseInt(process.env.PORT || "3000", 10);
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+// Serve public directory static assets (manifest, icons, images)
+app.use(express.static(path.join(process.cwd(), "public"), { maxAge: "1d" }));
+
 // Helper to determine the current protocol and host for local or deployment environments
 function getBaseUrl(req: express.Request): string {
   const host = req.headers.host || `localhost:${PORT}`;

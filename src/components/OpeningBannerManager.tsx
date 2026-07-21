@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import { 
   Plus, Edit, Trash2, Eye, Calendar, Sparkles, Check, X, Image as ImageIcon,
   Sliders, Monitor, Smartphone, Clock, Layout, RefreshCw, Upload, Link as LinkIcon,
-  Play, ShieldAlert, Layers, Move, ArrowUpRight
+  Play, ShieldAlert, Layers, Move, ArrowUpRight, Database
 } from "lucide-react";
 import { OpeningBanner, OpeningBannerPosition, OpeningBannerAnimation, OpeningBannerPageTarget, OpeningBannerInterval } from "../types";
 import OpeningBannerModal from "./OpeningBannerModal";
+import OpeningBannerSqlModal from "./OpeningBannerSqlModal";
 
 interface OpeningBannerManagerProps {
   banners: OpeningBanner[];
@@ -27,6 +28,7 @@ export default function OpeningBannerManager({
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<"list" | "form">("list");
   const [uploadMode, setUploadMode] = useState<"upload" | "url">("upload");
+  const [showSqlModal, setShowSqlModal] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState<Partial<OpeningBanner>>({
@@ -178,7 +180,14 @@ export default function OpeningBannerManager({
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setShowSqlModal(true)}
+              className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl bg-black/30 hover:bg-black/50 text-white font-bold text-sm backdrop-blur-md border border-white/20 transition-all transform hover:-translate-y-0.5 active:scale-95"
+            >
+              <Database className="w-4 h-4 text-amber-300" />
+              <span>Generate SQL</span>
+            </button>
             {activeTab === "list" ? (
               <button
                 onClick={handleCreateNew}
@@ -775,6 +784,13 @@ export default function OpeningBannerManager({
           onClosePreview={() => setPreviewingBanner(null)}
         />
       )}
+
+      {/* SQL Schema & Generator Modal */}
+      <OpeningBannerSqlModal
+        isOpen={showSqlModal}
+        onClose={() => setShowSqlModal(false)}
+        banners={banners}
+      />
     </div>
   );
 }

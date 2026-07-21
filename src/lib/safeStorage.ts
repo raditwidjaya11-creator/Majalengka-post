@@ -1,42 +1,74 @@
-class MemoryStorage implements Storage {
-  private store: Record<string, string> = {};
+class SafeStorage implements Storage {
+  private memoryStore: Record<string, string> = {};
 
   get length(): number {
-    return Object.keys(this.store).length;
+    try {
+      return window.localStorage.length;
+    } catch {
+      return Object.keys(this.memoryStore).length;
+    }
   }
 
   clear(): void {
-    this.store = {};
+    this.memoryStore = {};
+    try {
+      window.localStorage.clear();
+    } catch (e) {
+      console.warn("localStorage.clear failed:", e);
+    }
   }
 
   getItem(key: string): string | null {
-    return this.store[key] !== undefined ? this.store[key] : null;
+    try {
+      const val = window.localStorage.getItem(key);
+      if (val !== null) return val;
+    } catch (e) {
+      // Ignore and fallback to memoryStore
+    }
+    return this.memoryStore[key] !== undefined ? this.memoryStore[key] : null;
   }
 
   key(index: number): string | null {
-    const keys = Object.keys(this.store);
-    return keys[index] !== undefined ? keys[index] : null;
+    try {
+      return window.localStorage.key(index);
+    } catch {
+      const keys = Object.keys(this.memoryStore);
+      return keys[index] !== undefined ? keys[index] : null;
+    }
   }
 
   removeItem(key: string): void {
-    delete this.store[key];
+    delete this.memoryStore[key];
+    try {
+      window.localStorage.removeItem(key);
+    } catch (e) {
+      console.warn("localStorage.removeItem failed:", e);
+    }
   }
 
   setItem(key: string, value: string): void {
-    this.store[key] = String(value);
+    // Always keep in memory fallback
+    this.memoryStore[key] = String(value);
+
+    try {
+      window.localStorage.setItem(key, value);
+    } catch (e) {
+      console.warn(`[safeLocalStorage] localStorage.setItem failed for "${key}" (QuotaExceeded or restricted). Kept in memory fallback.`, e);
+      // Attempt to clean up temporary cache items if quota exceeded
+      try {
+        for (let i = window.localStorage.length - 1; i >= 0; i--) {
+          const k = window.localStorage.key(i);
+          if (k && (k.startsWith("temp_") || k.includes("draft") || k.includes("autosave"))) {
+            window.localStorage.removeItem(k);
+          }
+        }
+        window.localStorage.setItem(key, value);
+      } catch (err2) {
+        // Safe silence - already stored in memoryStore so the application will continue smoothly
+      }
+    }
   }
 }
 
-const getStorage = (): Storage => {
-  try {
-    const testKey = "__storage_test__";
-    window.localStorage.setItem(testKey, testKey);
-    window.localStorage.removeItem(testKey);
-    return window.localStorage;
-  } catch (e) {
-    console.warn("localStorage is not available, falling back to in-memory storage:", e);
-    return new MemoryStorage();
-  }
-};
+export const safeLocalStorage: Storage = new SafeStorage();
 
-export const safeLocalStorage = getStorage();
