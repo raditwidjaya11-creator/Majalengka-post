@@ -14,17 +14,10 @@ const isValidUrl = (str: string) => {
 };
 
 const getSupabaseEnv = () => {
-  let url = "";
-  let key = "";
-  try {
-    // @ts-ignore
-    url = import.meta.env?.SUPABASE_URL || import.meta.env?.VITE_SUPABASE_URL || "";
-    // @ts-ignore
-    key = import.meta.env?.SUPABASE_SERVICE_ROLE_KEY || import.meta.env?.VITE_SUPABASE_ANON_KEY || "";
-  } catch (e) {
-    // Fallover
-  }
-  return { url, key };
+  return {
+    url: import.meta.env.VITE_SUPABASE_URL || "",
+    key: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
+  };
 };
 
 const { url: supabaseUrl, key: supabaseAnonKey } = getSupabaseEnv();

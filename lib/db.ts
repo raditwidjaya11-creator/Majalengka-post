@@ -8,16 +8,34 @@ import {
 } from "./mockData.js";
 
 export function getSupabaseClient() {
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
-  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || "";
+  const supabaseUrl =
+    process.env.SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL ||
+    "";
+
+  const supabaseServiceRoleKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    "";
+
   if (supabaseUrl && supabaseServiceRoleKey) {
     try {
-      return createClient(supabaseUrl, supabaseServiceRoleKey);
+      return createClient(
+        supabaseUrl,
+        supabaseServiceRoleKey,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        }
+      );
     } catch (err) {
       console.error("[Backend Supabase] Error creating Supabase client:", err);
       return null;
     }
   }
+
+  console.error("[Backend Supabase] Missing Supabase credentials");
   return null;
 }
 
@@ -142,7 +160,7 @@ export async function fetchArticles() {
         .select("*")
         .order("date", { ascending: false });
 
-      const { data, error } = await withTimeout<any>(fetchPromise, 4000);
+      const { data, error } = await withTimeout<any>(fetchPromise, 20000);
       
       if (!error && data && data.length > 0) {
         return data.map((b: any) => {
@@ -325,7 +343,7 @@ export async function fetchBanners() {
   if (supabase) {
     try {
       const fetchPromise = supabase.from("banners").select("*");
-      const { data, error } = await withTimeout<any>(fetchPromise, 4000);
+      const { data, error } = await withTimeout<any>(fetchPromise, 20000);
       if (!error && data && data.length > 0) {
         return data.map((b: any) => {
           const item = normalizeObject(b, BANNER_MAPPINGS);
@@ -411,7 +429,7 @@ export async function fetchMediaItems() {
   if (supabase) {
     try {
       const fetchPromise = supabase.from("media_items").select("*");
-      const { data, error } = await withTimeout<any>(fetchPromise, 4000);
+      const { data, error } = await withTimeout<any>(fetchPromise, 20000);
       if (!error && data && data.length > 0) {
         return data.map((item: any) => ({
           ...item,
@@ -461,7 +479,7 @@ export async function fetchPoll() {
   if (supabase) {
     try {
       const fetchPromise = supabase.from("polls").select("*").eq("active", true).limit(1);
-      const { data, error } = await withTimeout<any>(fetchPromise, 4000);
+      const { data, error } = await withTimeout<any>(fetchPromise, 20000);
       if (!error && data && data.length > 0) {
         const b = data[0];
         const poll = normalizeObject(b, POLL_MAPPINGS);
@@ -519,7 +537,7 @@ export async function fetchCompanyProfiles() {
   if (supabase) {
     try {
       const fetchPromise = supabase.from("company_info").select("*");
-      const { data, error } = await withTimeout<any>(fetchPromise, 4000);
+      const { data, error } = await withTimeout<any>(fetchPromise, 20000);
       if (!error && data && data.length > 0) {
         return data.map((b: any) => ({
           id: b.id,
@@ -571,14 +589,15 @@ export async function fetchValasRates() {
   if (supabase) {
     try {
       const fetchPromise = supabase.from("valas_rates").select("*");
-      const { data, error } = await withTimeout<any>(fetchPromise, 4000);
+      const { data, error } = await withTimeout<any>(fetchPromise, 20000);
       if (!error && data && data.length > 0) {
-        return data.map((b: any) => ({
-          code: b.code,
-          rate: b.rate,
-          change: b.change,
-          updatedAt: b.updated_at || b.updatedAt || new Date().toISOString()
-        }));
+        return data.map(b => ({
+    code: b.code,
+    currency_name: b.currency_name,
+    rate: Number(b.rate),
+    changePercent: Number(b.change_percent || 0),
+    updatedAt: b.updated_at
+}));
       }
     } catch (err) {
       console.error("Error fetching valas rates in lib/db.ts:", err);
@@ -593,10 +612,16 @@ export async function upsertValasRates(rates: any[]) {
   
   const payload = rates.map(r => ({
     code: r.code,
-    rate: r.rate,
-    change: r.change,
+    currency_name: r.currency_name ?? "",
+    rate: Number(r.rate),
+    change_percent: Number(
+        r.change_percent ??
+        r.changePercent ??
+        r.change ??
+        0
+    ),
     updated_at: new Date().toISOString()
-  }));
+}));
 
   const { error } = await supabase.from("valas_rates").upsert(payload, { onConflict: "code" });
   if (error) throw error;
