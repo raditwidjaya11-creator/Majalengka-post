@@ -150,6 +150,20 @@ export function writeSeoSettings(data: SeoSettings) {
   }
 }
 
+export function getUploadFilePath(filename: string): string | null {
+  const safeFilename = path.basename(filename);
+  const primaryPath = path.join(UPLOADS_DIR, safeFilename);
+  if (fs.existsSync(primaryPath)) return primaryPath;
+
+  const rootPath = path.join(process.cwd(), "uploads", safeFilename);
+  if (fs.existsSync(rootPath)) return rootPath;
+
+  const tmpPath = path.join("/tmp/uploads", safeFilename);
+  if (fs.existsSync(tmpPath)) return tmpPath;
+
+  return null;
+}
+
 /**
  * Automatically converts base64 data URLs to static saved files in UPLOADS_DIR
  * to prevent multi-megabyte JSON payloads that cause fetch failures.
@@ -170,16 +184,25 @@ export function convertBase64ToUploadUrl(str: string | undefined | null): string
   else if (mimeType.includes("svg")) ext = "svg";
   
   try {
-    if (!fs.existsSync(UPLOADS_DIR)) {
-      fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-    }
     const hash = crypto.createHash("md5").update(base64Data).digest("hex").slice(0, 12);
     const fileName = `img-${hash}.${ext}`;
-    const filePath = path.join(UPLOADS_DIR, fileName);
-    
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, Buffer.from(base64Data, "base64"));
+    const buffer = Buffer.from(base64Data, "base64");
+
+    const targetDirs = [UPLOADS_DIR, path.join(process.cwd(), "uploads"), "/tmp/uploads"];
+    for (const dir of targetDirs) {
+      try {
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+        }
+        const targetPath = path.join(dir, fileName);
+        if (!fs.existsSync(targetPath)) {
+          fs.writeFileSync(targetPath, buffer);
+        }
+      } catch (e) {
+        // ignore if a specific dir isn't writeable
+      }
     }
+    
     return `/uploads/${fileName}`;
   } catch (err) {
     console.error("Error saving base64 to uploads file:", err);

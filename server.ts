@@ -34,6 +34,7 @@ import { slugify, injectSEOMetadata, injectGeneralSEOMetadata, generateSitemapXM
 import { handleSEORouting } from "./server/middleware/seo";
 import {
   UPLOADS_DIR,
+  getUploadFilePath,
   getLiveCameraFrame,
   setLiveCameraFrame
 } from "./lib/vercel-storage";
@@ -422,9 +423,14 @@ app.use("/uploads", express.static(UPLOADS_DIR));
 // Dynamic endpoint to guarantee serving of files on serverless setups like Vercel
 app.get("/uploads/:filename", (req, res) => {
   try {
-    const filePath = path.join(UPLOADS_DIR, req.params.filename);
-    if (fs.existsSync(filePath)) {
+    const safeFilename = path.basename(req.params.filename);
+    const filePath = getUploadFilePath(safeFilename);
+    if (filePath && fs.existsSync(filePath)) {
       return res.sendFile(filePath);
+    }
+    const ext = path.extname(safeFilename).toLowerCase();
+    if (ext === ".jpg" || ext === ".jpeg" || ext === ".png" || ext === ".webp" || ext === ".gif" || ext === ".svg") {
+      return res.redirect("https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=800");
     }
     return res.status(404).send("File not found");
   } catch (err: any) {
