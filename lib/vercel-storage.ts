@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 
 // Paths
 export let SHARES_FILE = path.join(process.cwd(), "shares.json");
@@ -146,5 +147,42 @@ export function writeSeoSettings(data: SeoSettings) {
     fs.writeFileSync(SEO_SETTINGS_FILE, JSON.stringify(data, null, 2), "utf-8");
   } catch (err) {
     console.error("Error writing seo-settings.json:", err);
+  }
+}
+
+/**
+ * Automatically converts base64 data URLs to static saved files in UPLOADS_DIR
+ * to prevent multi-megabyte JSON payloads that cause fetch failures.
+ */
+export function convertBase64ToUploadUrl(str: string | undefined | null): string {
+  if (!str || typeof str !== "string") return str || "";
+  if (!str.startsWith("data:")) return str;
+  
+  const matches = str.match(/^data:(image\/[a-zA-Z0-9+\-+.]+);base64,(.+)$/);
+  if (!matches) return str;
+  
+  const mimeType = matches[1];
+  const base64Data = matches[2];
+  let ext = "jpg";
+  if (mimeType.includes("png")) ext = "png";
+  else if (mimeType.includes("webp")) ext = "webp";
+  else if (mimeType.includes("gif")) ext = "gif";
+  else if (mimeType.includes("svg")) ext = "svg";
+  
+  try {
+    if (!fs.existsSync(UPLOADS_DIR)) {
+      fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+    }
+    const hash = crypto.createHash("md5").update(base64Data).digest("hex").slice(0, 12);
+    const fileName = `img-${hash}.${ext}`;
+    const filePath = path.join(UPLOADS_DIR, fileName);
+    
+    if (!fs.existsSync(filePath)) {
+      fs.writeFileSync(filePath, Buffer.from(base64Data, "base64"));
+    }
+    return `/uploads/${fileName}`;
+  } catch (err) {
+    console.error("Error saving base64 to uploads file:", err);
+    return str;
   }
 }

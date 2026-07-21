@@ -165,7 +165,34 @@ export default function MobilePremiumApp({
 
   const handleLikeComment = (commentId: string) => {
     setArticleComments(prev => {
-      const updated = prev.map(c => {
+      let updatedPrev = [...prev];
+      const exists = prev.some(c => c.id === commentId || (c.replies && c.replies.some(r => r.id === commentId)));
+      
+      // If the comment is a fallback comment and does not yet exist in our state, initialize it
+      if (!exists && commentId.startsWith("fallback-")) {
+        const match = commentId.match(/^fallback-(\d+)-(.*)$/);
+        if (match) {
+          const index = match[1];
+          const articleId = match[2];
+          const fallbackComment: Comment = {
+            id: commentId,
+            articleId: articleId,
+            user: index === "1" ? "Agus Salim" : "Indah Wahyuni",
+            avatar: index === "1" ? "https://api.dicebear.com/7.x/adventurer/svg?seed=Agus" : "https://api.dicebear.com/7.x/adventurer/svg?seed=Indah",
+            content: index === "1" 
+              ? "Berita yang sangat mencerdaskan. Semoga bisa segera direalisasikan demi kelancaran Majalengka." 
+              : "Sangat bangga karya anak bangsa diakui dunia luar!",
+            timestamp: new Date(Date.now() - (index === "1" ? 2 : 3) * 60 * 60 * 1000).toISOString(),
+            likes: index === "1" ? 12 : 24,
+            reported: false,
+            isModerated: true,
+            replies: []
+          };
+          updatedPrev.push(fallbackComment);
+        }
+      }
+
+      const updated = updatedPrev.map(c => {
         if (c.id === commentId) {
           return { ...c, likes: c.likes + 1 };
         }

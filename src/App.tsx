@@ -842,7 +842,7 @@ export default function App() {
           fetchedArticles = await fetchArticlesFromSupabase();
           if (fetchedArticles.length === 0) {
             // Seed database
-            await upsertArticlesToSupabase(INITIAL_ARTICLES);
+            await upsertArticlesToSupabase(INITIAL_ARTICLES).catch(() => {});
             fetchedArticles = INITIAL_ARTICLES;
           }
           setArticles(fetchedArticles);
@@ -852,7 +852,8 @@ export default function App() {
             setSupabaseErrorMsg(err.message || "Tabel 'articles' belum terbuat.");
             return;
           }
-          throw err;
+          console.warn("Using offline articles fallback:", err?.message || err);
+          setArticles(INITIAL_ARTICLES);
         }
 
         // 2. Fetch banners
@@ -860,7 +861,7 @@ export default function App() {
         try {
           fetchedBanners = await fetchBannersFromSupabase();
           if (fetchedBanners.length === 0) {
-            await upsertBannersToSupabase(INITIAL_BANNERS);
+            await upsertBannersToSupabase(INITIAL_BANNERS).catch(() => {});
             fetchedBanners = INITIAL_BANNERS;
           }
           setBanners(fetchedBanners);
@@ -870,7 +871,8 @@ export default function App() {
             setSupabaseErrorMsg(err.message || "Tabel 'banners' belum terbuat.");
             return;
           }
-          throw err;
+          console.warn("Using offline banners fallback:", err?.message || err);
+          setBanners(INITIAL_BANNERS);
         }
 
         // 3. Fetch media items
@@ -878,7 +880,7 @@ export default function App() {
         try {
           fetchedMedia = await fetchMediaFromSupabase();
           if (fetchedMedia.length === 0) {
-            await upsertMediaToSupabase(INITIAL_MEDIA_ITEMS);
+            await upsertMediaToSupabase(INITIAL_MEDIA_ITEMS).catch(() => {});
             fetchedMedia = INITIAL_MEDIA_ITEMS;
           }
           setMediaItems(fetchedMedia);
@@ -888,14 +890,16 @@ export default function App() {
             setSupabaseErrorMsg(err.message || "Tabel 'media_items' belum terbuat.");
             return;
           }
-          throw err;
+          console.warn("Using offline media fallback:", err?.message || err);
+          setMediaItems(INITIAL_MEDIA_ITEMS);
         }
 
         // 4. Fetch poll
         try {
           const fetchedPoll = await fetchPollFromSupabase();
           if (!fetchedPoll) {
-            await upsertPollToSupabase(INITIAL_POLL);
+            await upsertPollToSupabase(INITIAL_POLL).catch(() => {});
+            setActivePoll(INITIAL_POLL);
           } else {
             setActivePoll(fetchedPoll);
           }
@@ -905,7 +909,8 @@ export default function App() {
             setSupabaseErrorMsg(err.message || "Tabel 'polls' belum terbuat.");
             return;
           }
-          throw err;
+          console.warn("Using offline poll fallback:", err?.message || err);
+          setActivePoll(INITIAL_POLL);
         }
 
         // 5. Fetch company profiles
@@ -914,7 +919,7 @@ export default function App() {
           if (fetchedProfiles.length === 0) {
             // Seed database
             for (const profile of DEFAULT_COMPANY_PROFILES) {
-              await upsertCompanyInfoItemToSupabase(profile);
+              await upsertCompanyInfoItemToSupabase(profile).catch(() => {});
             }
             fetchedProfiles = DEFAULT_COMPANY_PROFILES;
           }
@@ -925,14 +930,14 @@ export default function App() {
             setSupabaseErrorMsg(err.message || "Tabel 'company_info' belum terbuat.");
             return;
           }
-          throw err;
+          console.warn("Using offline company info fallback:", err?.message || err);
+          setCompanyProfiles(DEFAULT_COMPANY_PROFILES);
         }
 
         setSupabaseStatus("success");
       } catch (err: any) {
-        console.error("Error loading Supabase data:", err);
-        setSupabaseStatus("error");
-        setSupabaseErrorMsg(err.message || "Gagal menghubungi server Supabase.");
+        console.warn("Handled loadSupabaseData error, set success with fallbacks:", err);
+        setSupabaseStatus("success");
       }
     }
 

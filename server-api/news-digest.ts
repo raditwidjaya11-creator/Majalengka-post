@@ -131,6 +131,19 @@ export default async function handler(req: any, res: any) {
       throw new Error("No articles available for generating the news digest.");
     }
 
+    const cleanArticles = recentArticles.map((art: any) => ({
+      id: art.id,
+      title: art.title || "",
+      subTitle: art.subTitle || "",
+      summary: art.summary || "",
+      coverImage: art.coverImage ? (art.coverImage.startsWith("data:") ? "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=800" : art.coverImage) : "",
+      date: art.date || "",
+      time: art.time || "",
+      category: art.category || "Berita",
+      views: art.views || 0,
+      slug: art.slug || art.id
+    }));
+
     // 3. AI News Digest Generation using Gemini with proper error handling
     const aiClient = getGeminiClient();
     if (aiClient) {
@@ -166,7 +179,7 @@ Tulis dalam Bahasa Indonesia yang segar dan profesional, serta tambahkan emoji y
           return res.status(200).json({
             success: true,
             bulletin: aiResponse.text,
-            articles: recentArticles,
+            articles: cleanArticles,
             source: "gemini-ai",
             isFromSupabase,
             generatedAt: new Date().toISOString()
@@ -192,7 +205,7 @@ Tulis dalam Bahasa Indonesia yang segar dan profesional, serta tambahkan emoji y
     return res.status(200).json({
       success: true,
       bulletin: fallbackBulletin,
-      articles: recentArticles,
+      articles: cleanArticles,
       source: "local-fallback",
       isFromSupabase,
       generatedAt: new Date().toISOString(),

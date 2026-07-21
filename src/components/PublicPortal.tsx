@@ -170,19 +170,34 @@ export default function PublicPortal({
     setIsDigestLoading(true);
     setDigestError(null);
     try {
-      // Fetch news-digest directly as per user request
-      const res = await fetch("/api/news-digest");
+      // Fetch news-digest directly
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch("/api/news-digest", { signal: controller.signal }).finally(() => clearTimeout(timeoutId));
       if (!res.ok) {
-        const errorText = await res.text();
-        console.error("News digest fetch error (status " + res.status + "):", errorText);
-        setDigestError(`Gagal memuat Digest Berita (Status: ${res.status}).`);
-        return;
+        throw new Error(`Status ${res.status}`);
       }
       const data = await res.json();
-      setDigest(data);
+      if (data && data.bulletin) {
+        setDigest(data);
+        return;
+      }
+      throw new Error("Invalid digest response");
     } catch (err: any) {
-      console.error("Error fetching news digest:", err);
-      setDigestError("Gagal menghubungi server untuk memuat Digest Berita.");
+      console.warn("API news digest fallback triggered:", err?.message || err);
+      // Fallback local digest using articles available in props
+      const top3 = articles.slice(0, 3);
+      const formattedDate = new Date().toLocaleDateString("id-ID", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      const localBulletin = `📢 *MAJALENGKA POST DAILY BULLETIN* 📰\nEdisi Hari Ini: ${formattedDate}\n\nBerikut Rangkuman 3 Berita Utama Hari Ini:\n\n` +
+        top3.map((a, i) => `${i === 0 ? "🔥" : i === 1 ? "📍" : "💼"} *${i + 1}. ${a.title}*\n${a.summary || "Berita terkini dari redaksi Majalengka Post."}`).join("\n\n") +
+        `\n\n✨ Baca selengkapnya langsung di portal berita Majalengka Post!`;
+      
+      setDigest({
+        bulletin: localBulletin,
+        articles: top3,
+        source: "client-local-fallback"
+      });
+      setDigestError(null);
     } finally {
       setIsDigestLoading(false);
     }

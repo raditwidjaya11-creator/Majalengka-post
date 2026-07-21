@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { convertBase64ToUploadUrl } from "./vercel-storage.js";
 import {
   INITIAL_ARTICLES,
   INITIAL_BANNERS,
@@ -152,6 +153,8 @@ export async function fetchArticles() {
       if (!error && data && data.length > 0) {
         return data.map((b: any) => {
           const item = normalizeObject(b, ARTICLE_MAPPINGS);
+          const rawCover = item.coverImage !== undefined ? item.coverImage : (item.coverimage || "");
+          const rawGallery = safeJsonParse(item.galleryImages, []);
           return {
             id: item.id,
             title: item.title,
@@ -159,8 +162,8 @@ export async function fetchArticles() {
             summary: item.summary || "",
             content: item.content || "",
             bodyJson: safeJsonParse(item.bodyJson, null),
-            coverImage: item.coverImage !== undefined ? item.coverImage : (item.coverimage || ""),
-            galleryImages: safeJsonParse(item.galleryImages, []),
+            coverImage: convertBase64ToUploadUrl(rawCover),
+            galleryImages: (Array.isArray(rawGallery) ? rawGallery : []).map((img: string) => convertBase64ToUploadUrl(img)),
             videoUrl: item.videoUrl !== undefined ? item.videoUrl : (item.videourl || ""),
             audioUrl: item.audioUrl !== undefined ? item.audioUrl : (item.audiourl || ""),
             author: item.author || "",
@@ -194,7 +197,11 @@ export async function fetchArticles() {
       console.error("Error fetching articles inside lib/db.ts:", err);
     }
   }
-  return INITIAL_ARTICLES;
+  return INITIAL_ARTICLES.map(a => ({
+    ...a,
+    coverImage: convertBase64ToUploadUrl(a.coverImage),
+    galleryImages: (a.galleryImages || []).map(img => convertBase64ToUploadUrl(img))
+  }));
 }
 
 export async function upsertArticles(articles: any[]) {
