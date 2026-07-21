@@ -33,75 +33,75 @@
   "rewrites": [
     {
       "source": "/assets/:path*",
-      "destination": "/api/index"
+      "destination": "/api/index?__vercel_original_path=/assets/:path*"
     },
     {
       "source": "/favicon.ico",
-      "destination": "/api/index"
+      "destination": "/api/index?__vercel_original_path=/favicon.ico"
     },
     {
       "source": "/favicon.png",
-      "destination": "/api/index"
+      "destination": "/api/index?__vercel_original_path=/favicon.png"
     },
     {
       "source": "/manifest.json",
-      "destination": "/api/index"
+      "destination": "/api/index?__vercel_original_path=/manifest.json"
     },
     {
       "source": "/sw.js",
-      "destination": "/api/index"
+      "destination": "/api/index?__vercel_original_path=/sw.js"
     },
     {
       "source": "/apple-touch-icon.png",
-      "destination": "/api/index"
+      "destination": "/api/index?__vercel_original_path=/apple-touch-icon.png"
     },
     {
       "source": "/default-news.jpg",
-      "destination": "/api/index"
+      "destination": "/api/index?__vercel_original_path=/default-news.jpg"
     },
     {
       "source": "/default-share.jpg",
-      "destination": "/api/index"
+      "destination": "/api/index?__vercel_original_path=/default-share.jpg"
     },
     {
       "source": "/logo.jpg",
-      "destination": "/api/index"
+      "destination": "/api/index?__vercel_original_path=/logo.jpg"
     },
     {
       "source": "/icon-192.png",
-      "destination": "/api/index"
+      "destination": "/api/index?__vercel_original_path=/icon-192.png"
     },
     {
       "source": "/icon-512.png",
-      "destination": "/api/index"
+      "destination": "/api/index?__vercel_original_path=/icon-512.png"
     },
     {
       "source": "/icon-maskable.png",
-      "destination": "/api/index"
+      "destination": "/api/index?__vercel_original_path=/icon-maskable.png"
     },
     {
       "source": "/api/news/digest",
-      "destination": "/api/index"
+      "destination": "/api/index?__vercel_original_path=/api/news/digest"
     },
     {
       "source": "/robots.txt",
-      "destination": "/api/index"
+      "destination": "/api/index?__vercel_original_path=/robots.txt"
     },
     {
       "source": "/sitemap.xml",
-      "destination": "/api/index"
+      "destination": "/api/index?__vercel_original_path=/sitemap.xml"
     },
     {
       "source": "/google:hash.html",
-      "destination": "/api/index?hash=:hash"
+      "destination": "/api/index?hash=:hash&__vercel_original_path=/google:hash.html"
     },
     {
       "source": "/uploads/:filename",
-      "destination": "/api/index?filename=:filename"
+      "destination": "/api/index?filename=:filename&__vercel_original_path=/uploads/:filename"
     },
     {
       "source": "/api/:path*",
-      "destination": "/api/index"
+      "destination": "/api/index?__vercel_original_path=/api/:path*"
     },
     {
       "source": "/((?!api|assets|src|.*\\..*).*)",

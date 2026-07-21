@@ -50,12 +50,33 @@ import { html as compiledHtml } from "./template.js";
 
 const app = express();
 
-// Restore original request URL from Vercel's rewrite headers to allow routing inside Express
+// Restore original request URL from Vercel's rewrite headers or query parameters to allow routing inside Express
 app.use((req, res, next) => {
-  const originalUrl = req.headers["x-forwarded-url"] || req.headers["x-matched-path"];
+  let originalUrl: string | undefined = undefined;
+
+  // 1. Check if we passed it in custom query parameter (most reliable)
+  if (req.query && req.query.__vercel_original_path) {
+    originalUrl = String(req.query.__vercel_original_path);
+    // Remove the temporary query parameter so it doesn't pollute the route parameters
+    delete req.query.__vercel_original_path;
+  }
+
+  // 2. Check x-forwarded-url header
+  if (!originalUrl && req.headers["x-forwarded-url"]) {
+    originalUrl = String(req.headers["x-forwarded-url"]);
+  }
+
+  // 3. Fallback to x-matched-path (only if it is not /api/index to avoid loops)
+  if (!originalUrl && req.headers["x-matched-path"]) {
+    const matched = String(req.headers["x-matched-path"]);
+    if (!matched.endsWith("/api/index") && !matched.endsWith("/api/index.ts")) {
+      originalUrl = matched;
+    }
+  }
+
   if (originalUrl) {
-    console.log(`Vercel Rewrite: Original URL restored from header to: ${originalUrl} (was: ${req.url})`);
-    req.url = String(originalUrl);
+    console.log(`Vercel Rewrite: Original URL restored to: ${originalUrl} (was: ${req.url})`);
+    req.url = originalUrl;
   }
   next();
 });
@@ -361,7 +382,7 @@ app.all("*", async (req, res) => {
     }
 
     // Resolve original path
-    const urlPath = String(req.headers["x-forwarded-url"] || req.headers["x-matched-path"] || req.url || "/");
+    const urlPath = String(req.headers["x-forwarded-url"] || req.url || "/");
     const parsedUrl = new URL(urlPath, baseUrl);
     const pathname = parsedUrl.pathname;
 
