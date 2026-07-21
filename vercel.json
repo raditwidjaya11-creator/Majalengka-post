@@ -3,10 +3,7 @@
 
   "functions": {
     "api/index.ts": {
-      "includeFiles": [
-        "api/index-template.html",
-        "dist/**"
-      ]
+      "includeFiles": "dist/**"
     }
   },
 
