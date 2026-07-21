@@ -97,6 +97,14 @@
       "destination": "/api/index?filename=:filename&__vercel_original_path=/uploads/:filename"
     },
     {
+      "source": "/artikel/:slug",
+      "destination": "/api/index?__vercel_original_path=/artikel/:slug"
+    },
+    {
+      "source": "/berita/:slug",
+      "destination": "/api/index?__vercel_original_path=/berita/:slug"
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api/index?__vercel_original_path=/api/:path*"
     },
