@@ -840,6 +840,13 @@ export default function App() {
         let fetchedArticles: Article[] = [];
         try {
           fetchedArticles = await fetchArticlesFromSupabase();
+
+console.log("Jumlah artikel:", fetchedArticles.length);
+console.log("Artikel pertama:", fetchedArticles[0]);
+
+setArticles(fetchedArticles);
+
+console.log("setArticles selesai");
           if (fetchedArticles.length === 0) {
             // Seed database
             await upsertArticlesToSupabase(INITIAL_ARTICLES);

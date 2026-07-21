@@ -9,8 +9,7 @@ const __dirname = path.dirname(__filename);
 
 // Import all non-serverless handlers with .js extension for ES Module compatibility
 import healthHandler from "../server-api/health.js";
-import articlesHandler from "../server-api/articles.js";
-import { generateNewsDigest } from "../server-api/news-digest.js";
+import newsDigestHandler from "../server-api/news-digest.js";
 import robotsHandler from "../server-api/robots.js";
 import sitemapHandler from "../server-api/sitemap.js";
 import googleVerifyHandler from "../server-api/google-verify.js";
@@ -29,7 +28,25 @@ import sharesIncrementHandler from "../server-api/shares/increment.js";
 import seoSettingsHandler from "../server-api/seo/settings.js";
 
 import { getSeoSettingsDb } from "../lib/supabase-service.js";
+import {
+  fetchArticles,
+  upsertArticles,
+  deleteArticle,
+  fetchBanners,
+  upsertBanners,
+  deleteBanner,
+  fetchMediaItems,
+  upsertMediaItems,
+  deleteMediaItem,
+  fetchPoll,
+  upsertPoll,
+  fetchCompanyProfiles,
+  upsertCompanyProfile,
+  fetchValasRates,
+  upsertValasRates
+} from "../lib/db.js";
 import { handleSEORouting } from "../server/middleware/seo.js";
+import { html as compiledHtml } from "./template.js";
 
 const app = express();
 
@@ -45,6 +62,9 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+// Serve static assets from the compiled "dist" directory
+app.use(express.static(path.join(process.cwd(), "dist")));
 
 // Internal API routes mapping
 app.all("/api/health", healthHandler);
@@ -71,32 +91,189 @@ app.all("/api/debug-fs", (req, res) => {
 });
 app.all("/api/supabase/config", supabaseConfigHandler);
 app.all("/api/valas/latest", valasLatestHandler);
-app.all("/api/news/digest", async (req, res) => {
+app.all("/api/news/digest", newsDigestHandler);
+app.all("/api/news-digest", newsDigestHandler);
+// Articles API
+app.get("/api/articles", async (req, res) => {
   try {
-    const result = await generateNewsDigest();
-    res.json(result);
-  } catch (error: any) {
-    console.error("News digest error:", error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    const articles = await fetchArticles();
+    return res.json({ success: true, count: articles.length, articles });
+  } catch (err: any) {
+    console.error("Error fetching articles in serverless API:", err);
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 
-app.all("/api/news-digest", async (req, res) => {
+app.post("/api/articles", async (req, res) => {
   try {
-    const result = await generateNewsDigest();
-    res.json(result);
-  } catch (error: any) {
-    console.error("News digest error:", error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    const { articles } = req.body || {};
+    if (!Array.isArray(articles)) {
+      return res.status(400).json({ success: false, error: "articles must be an array." });
+    }
+    await upsertArticles(articles);
+    return res.json({ success: true, message: "Articles upserted successfully" });
+  } catch (err: any) {
+    console.error("Error upserting articles in serverless API:", err);
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
-app.all("/api/articles", articlesHandler);
+
+app.post("/api/articles/delete", async (req, res) => {
+  try {
+    const { id } = req.body || {};
+    if (!id) {
+      return res.status(400).json({ success: false, error: "id is required." });
+    }
+    await deleteArticle(id);
+    return res.json({ success: true, message: "Article deleted successfully" });
+  } catch (err: any) {
+    console.error("Error deleting article in serverless API:", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Banners API
+app.get("/api/banners", async (req, res) => {
+  try {
+    const banners = await fetchBanners();
+    return res.json({ success: true, count: banners.length, banners });
+  } catch (err: any) {
+    console.error("Error fetching banners in serverless API:", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post("/api/banners", async (req, res) => {
+  try {
+    const { banners } = req.body || {};
+    if (!Array.isArray(banners)) {
+      return res.status(400).json({ success: false, error: "banners must be an array." });
+    }
+    await upsertBanners(banners);
+    return res.json({ success: true, message: "Banners upserted successfully" });
+  } catch (err: any) {
+    console.error("Error upserting banners in serverless API:", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post("/api/banners/delete", async (req, res) => {
+  try {
+    const { id } = req.body || {};
+    if (!id) {
+      return res.status(400).json({ success: false, error: "id is required." });
+    }
+    await deleteBanner(id);
+    return res.json({ success: true, message: "Banner deleted successfully" });
+  } catch (err: any) {
+    console.error("Error deleting banner in serverless API:", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Media API
+app.get("/api/media", async (req, res) => {
+  try {
+    const media = await fetchMediaItems();
+    return res.json({ success: true, count: media.length, media });
+  } catch (err: any) {
+    console.error("Error fetching media items in serverless API:", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post("/api/media", async (req, res) => {
+  try {
+    const { media } = req.body || {};
+    if (!Array.isArray(media)) {
+      return res.status(400).json({ success: false, error: "media must be an array." });
+    }
+    await upsertMediaItems(media);
+    return res.json({ success: true, message: "Media items upserted successfully" });
+  } catch (err: any) {
+    console.error("Error upserting media items in serverless API:", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post("/api/media/delete", async (req, res) => {
+  try {
+    const { id } = req.body || {};
+    if (!id) {
+      return res.status(400).json({ success: false, error: "id is required." });
+    }
+    await deleteMediaItem(id);
+    return res.json({ success: true, message: "Media item deleted successfully" });
+  } catch (err: any) {
+    console.error("Error deleting media item in serverless API:", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Polls API
+app.get("/api/polls", async (req, res) => {
+  try {
+    const poll = await fetchPoll();
+    return res.json({ success: true, poll });
+  } catch (err: any) {
+    console.error("Error fetching poll in serverless API:", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post("/api/polls", async (req, res) => {
+  try {
+    const { poll } = req.body || {};
+    if (!poll) {
+      return res.status(400).json({ success: false, error: "poll object is required." });
+    }
+    await upsertPoll(poll);
+    return res.json({ success: true, message: "Poll upserted successfully" });
+  } catch (err: any) {
+    console.error("Error upserting poll in serverless API:", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Company Info / Profiles API
+app.get(["/api/company-info", "/api/company-profiles"], async (req, res) => {
+  try {
+    const profiles = await fetchCompanyProfiles();
+    return res.json({ success: true, count: profiles.length, profiles });
+  } catch (err: any) {
+    console.error("Error fetching company profiles in serverless API:", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post(["/api/company-info", "/api/company-profiles"], async (req, res) => {
+  try {
+    const { profile } = req.body || {};
+    if (!profile) {
+      return res.status(400).json({ success: false, error: "profile object is required." });
+    }
+    await upsertCompanyProfile(profile);
+    return res.json({ success: true, message: "Company profile upserted successfully" });
+  } catch (err: any) {
+    console.error("Error upserting company profile in serverless API:", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Valas Rates API
+app.post("/api/valas/rates", async (req, res) => {
+  try {
+    const { rates } = req.body || {};
+    if (!Array.isArray(rates)) {
+      return res.status(400).json({ success: false, error: "rates must be an array." });
+    }
+    await upsertValasRates(rates);
+    return res.json({ success: true, message: "Valas rates upserted successfully" });
+  } catch (err: any) {
+    console.error("Error upserting valas rates in serverless API:", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
 app.all("/api/gemini/assistant", assistantHandler);
 app.all("/api/gemini/moderate", moderateHandler);
 app.all("/api/gemini/chat", chatHandler);
@@ -137,34 +314,39 @@ app.all("*", async (req, res) => {
     }
 
     // Read index-template.html
-    let html = "";
-    const pathsToTry = [
-      path.join(process.cwd(), "api", "index-template.html"),
-      path.join(__dirname, "index-template.html"),
-      path.join(__dirname, "..", "api", "index-template.html"),
-      path.join(process.cwd(), "dist", "index.html"),
-      path.join(__dirname, "..", "dist", "index.html"),
-      path.join(process.cwd(), "index.html"),
-      path.join(__dirname, "..", "index.html")
-    ];
-
+    let html = compiledHtml || "";
     const pathAttempts: string[] = [];
-    for (const p of pathsToTry) {
-      try {
-        const exists = fs.existsSync(p);
-        pathAttempts.push(`${p} (${exists ? "EXISTS" : "MISSING"})`);
-        if (exists) {
-          html = fs.readFileSync(p, "utf-8");
-          console.log(`Successfully loaded HTML template from: ${p}`);
-          break;
+
+    if (!html) {
+      const pathsToTry = [
+        path.join(process.cwd(), "api", "index-template.html"),
+        path.join(__dirname, "index-template.html"),
+        path.join(__dirname, "..", "api", "index-template.html"),
+        path.join(process.cwd(), "dist", "index.html"),
+        path.join(__dirname, "..", "dist", "index.html"),
+        path.join(process.cwd(), "index.html"),
+        path.join(__dirname, "..", "index.html")
+      ];
+
+      for (const p of pathsToTry) {
+        try {
+          const exists = fs.existsSync(p);
+          pathAttempts.push(`${p} (${exists ? "EXISTS" : "MISSING"})`);
+          if (exists) {
+            html = fs.readFileSync(p, "utf-8");
+            console.log(`Successfully loaded HTML template from file: ${p}`);
+            break;
+          }
+        } catch (err: any) {
+          pathAttempts.push(`${p} (ERROR: ${err.message})`);
         }
-      } catch (err: any) {
-        pathAttempts.push(`${p} (ERROR: ${err.message})`);
       }
+    } else {
+      console.log("Successfully loaded HTML template from compiled build-time template.");
     }
 
     if (!html) {
-      console.warn("Could not find index-template.html in any of the paths. Attempts: " + JSON.stringify(pathAttempts));
+      console.warn("Could not find index-template.html in compiled template or any of the paths. Attempts: " + JSON.stringify(pathAttempts));
       html = `<!DOCTYPE html>
 <html lang="id">
 <head>
