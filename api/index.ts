@@ -1,23 +1,3 @@
-{
-  "version": 2,
-
-  "functions": {
-    "api/**/*.ts": {
-      "runtime": "@vercel/node"
-    }
-  },
-
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/api/index"
-    }
-  ]
-}
 import express from "express";
 import fs from "fs";
 import path from "path";
@@ -28,28 +8,28 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Import all non-serverless handlers with .js extension for ES Module compatibility
-import healthHandler from "../server-api/health.js";
-import articlesHandler from "../server-api/articles.js";
-import newsDigestHandler from "../server-api/news-digest.js";
-import robotsHandler from "../server-api/robots.js";
-import sitemapHandler from "../server-api/sitemap.js";
-import googleVerifyHandler from "../server-api/google-verify.js";
-import uploadsHandler from "../server-api/uploads.js";
-import assistantHandler from "../server-api/gemini/assistant.js";
-import moderateHandler from "../server-api/gemini/moderate.js";
-import chatHandler from "../server-api/gemini/chat.js";
-import uploadRawHandler from "../server-api/livestream/upload-raw.js";
-import uploadHandler from "../server-api/livestream/upload.js";
-import frameHandler from "../server-api/livestream/frame.js";
-import settingsHandler from "../server-api/livestream/settings.js";
-import valasLatestHandler from "../server-api/valas/latest.js";
-import supabaseConfigHandler from "../server-api/supabase/config.js";
+import healthHandler from "../server-api/health";
+import articlesHandler from "../server-api/articles";
+import { generateNewsDigest } from "../server-api/news-digest";
+import robotsHandler from "../server-api/robots";
+import sitemapHandler from "../server-api/sitemap";
+import googleVerifyHandler from "../server-api/google-verify";
+import uploadsHandler from "../server-api/uploads";
+import assistantHandler from "../server-api/gemini/assistant";
+import moderateHandler from "../server-api/gemini/moderate";
+import chatHandler from "../server-api/gemini/chat";
+import uploadRawHandler from "../server-api/livestream/upload-raw";
+import uploadHandler from "../server-api/livestream/upload";
+import frameHandler from "../server-api/livestream/frame";
+import settingsHandler from "../server-api/livestream/settings";
+import valasLatestHandler from "../server-api/valas/latest";
+import supabaseConfigHandler from "../server-api/supabase/config";
 import sharesHandler from "../server-api/shares.js";
-import sharesIncrementHandler from "../server-api/shares/increment.js";
-import seoSettingsHandler from "../server-api/seo/settings.js";
+import sharesIncrementHandler from "../server-api/shares/increment";
+import seoSettingsHandler from "../server-api/seo/settings";
 
-import { getSeoSettingsDb } from "../lib/supabase-service.js";
-import { handleSEORouting } from "../server/middleware/seo.js";
+import { getSeoSettingsDb } from "../lib/supabase-service";
+import { handleSEORouting } from "../server/middleware/seo";
 
 const app = express();
 
@@ -91,8 +71,31 @@ app.all("/api/debug-fs", (req, res) => {
 });
 app.all("/api/supabase/config", supabaseConfigHandler);
 app.all("/api/valas/latest", valasLatestHandler);
-app.all("/api/news/digest", newsDigestHandler);
-app.all("/api/news-digest", newsDigestHandler);
+app.all("/api/news/digest", async (req, res) => {
+  try {
+    const result = await generateNewsDigest();
+    res.json(result);
+  } catch (error: any) {
+    console.error("News digest error:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.all("/api/news-digest", async (req, res) => {
+  try {
+    const result = await generateNewsDigest();
+    res.json(result);
+  } catch (error: any) {
+    console.error("News digest error:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
 app.all("/api/articles", articlesHandler);
 app.all("/api/gemini/assistant", assistantHandler);
 app.all("/api/gemini/moderate", moderateHandler);
