@@ -22,6 +22,9 @@ const getSupabaseEnv = () => {
 
 const { url: supabaseUrl, key: supabaseAnonKey } = getSupabaseEnv();
 
+let currentUrl = supabaseUrl;
+let currentKey = supabaseAnonKey;
+
 const dummyUrl = "https://placeholder-project-id.supabase.co";
 const dummyKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2MDAwMDAwMDAsImV4cCI6MTkwMDAwMDAwMH0.placeholder";
 
@@ -43,17 +46,29 @@ try {
 }
 
 export function initializeSupabase(url: string, key: string): boolean {
-  if (url && isValidUrl(url) && key) {
-    try {
-      supabase = createClient(url, key);
-      isSupabaseConfigured = true;
-      return true;
-    } catch (err) {
-      console.error("Failed to initialize Supabase client dynamically:", err);
-      return false;
-    }
+  if (!url || !isValidUrl(url) || !key) {
+    return false;
   }
-  return false;
+
+  // Jangan membuat client baru jika konfigurasi sama
+  if (url === currentUrl && key === currentKey) {
+    isSupabaseConfigured = true;
+    return true;
+  }
+
+  try {
+    currentUrl = url;
+    currentKey = key;
+
+    supabase = createClient(url, key);
+
+    isSupabaseConfigured = true;
+
+    return true;
+  } catch (err) {
+    console.error("Failed to initialize Supabase client dynamically:", err);
+    return false;
+  }
 }
 
 export function isTableMissingError(error: any): boolean {

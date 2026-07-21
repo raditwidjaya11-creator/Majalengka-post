@@ -261,7 +261,7 @@ export default function PublicPortal({
   const hijriDate = getHijriDateString(currentDate);
 
   // Filtered Articles based on Category / Search
-  const publishedArticles = articles.filter(a => a && a.status === "PUBLISHED");
+  const publishedArticles = articles;
   
   const filteredArticles = publishedArticles.filter(art => {
     const title = art.title || "";
