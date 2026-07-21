@@ -3,10 +3,7 @@
   "functions": {
     "api/**/*.ts": {
       "runtime": "@vercel/node",
-      "includeFiles": [
-        "dist/**",
-        "api/index-template.html"
-      ]
+      "includeFiles": "dist/**,api/index-template.html"
     }
   },
   "rewrites": [
