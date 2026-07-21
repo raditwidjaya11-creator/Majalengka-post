@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build && node -e \"import('fs').then(fs => fs.copyFileSync('dist/index.html', 'api/index-template.html'))\" && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "build": "vite build && node -e \"import('fs').then(fs => { const html = fs.readFileSync('dist/index.html', 'utf8'); fs.writeFileSync('api/template.ts', 'export const html = ' + JSON.stringify(html) + ';'); fs.copyFileSync('dist/index.html', 'api/index-template.html'); })\" && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit"

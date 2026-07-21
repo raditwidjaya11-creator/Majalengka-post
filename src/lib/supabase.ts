@@ -14,16 +14,20 @@ const isValidUrl = (str: string) => {
 };
 
 const getSupabaseEnv = () => {
-  return {
-    url: import.meta.env.VITE_SUPABASE_URL || "",
-    key: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
-  };
+  let url = "";
+  let key = "";
+  try {
+    // @ts-ignore
+    url = import.meta.env?.SUPABASE_URL || import.meta.env?.VITE_SUPABASE_URL || "";
+    // @ts-ignore
+    key = import.meta.env?.SUPABASE_SERVICE_ROLE_KEY || import.meta.env?.VITE_SUPABASE_ANON_KEY || "";
+  } catch (e) {
+    // Fallover
+  }
+  return { url, key };
 };
 
 const { url: supabaseUrl, key: supabaseAnonKey } = getSupabaseEnv();
-
-let currentUrl = supabaseUrl;
-let currentKey = supabaseAnonKey;
 
 const dummyUrl = "https://placeholder-project-id.supabase.co";
 const dummyKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2MDAwMDAwMDAsImV4cCI6MTkwMDAwMDAwMH0.placeholder";
@@ -46,29 +50,17 @@ try {
 }
 
 export function initializeSupabase(url: string, key: string): boolean {
-  if (!url || !isValidUrl(url) || !key) {
-    return false;
+  if (url && isValidUrl(url) && key) {
+    try {
+      supabase = createClient(url, key);
+      isSupabaseConfigured = true;
+      return true;
+    } catch (err) {
+      console.error("Failed to initialize Supabase client dynamically:", err);
+      return false;
+    }
   }
-
-  // Jangan membuat client baru jika konfigurasi sama
-  if (url === currentUrl && key === currentKey) {
-    isSupabaseConfigured = true;
-    return true;
-  }
-
-  try {
-    currentUrl = url;
-    currentKey = key;
-
-    supabase = createClient(url, key);
-
-    isSupabaseConfigured = true;
-
-    return true;
-  } catch (err) {
-    console.error("Failed to initialize Supabase client dynamically:", err);
-    return false;
-  }
+  return false;
 }
 
 export function isTableMissingError(error: any): boolean {

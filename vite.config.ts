@@ -13,13 +13,34 @@ export default defineConfig(() => {
       },
     },
     build: {
-  outDir: "dist",
-  assetsDir: "assets",
-  emptyOutDir: true,
-  manifest: true,
-  sourcemap: true,
-  chunkSizeWarningLimit: 1500
-},
+      outDir: "dist",
+      assetsDir: "assets",
+      emptyOutDir: true,
+      manifest: true,
+      sourcemap: true,
+      chunkSizeWarningLimit: 1500,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('react') || id.includes('react-dom')) {
+                return 'vendor-react';
+              }
+              if (id.includes('@supabase')) {
+                return 'vendor-supabase';
+              }
+              if (id.includes('@google/genai')) {
+                return 'vendor-gemini';
+              }
+              if (id.includes('motion') || id.includes('lucide-react')) {
+                return 'vendor-ui';
+              }
+              return 'vendor';
+            }
+          }
+        }
+      }
+    },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.

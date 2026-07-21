@@ -2,7 +2,6 @@
   "version": 2,
   "cleanUrls": true,
   "trailingSlash": false,
-
   "functions": {
     "api/index.ts": {
       "includeFiles": [
@@ -11,10 +10,77 @@
       ]
     }
   },
-
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(sw.js|manifest.json|favicon.ico|favicon.png|icon-192.png|icon-512.png|icon-maskable.png|apple-touch-icon.png)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
-      "source": "/api/:path*",
+      "source": "/assets/:path*",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/favicon.ico",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/favicon.png",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/manifest.json",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/sw.js",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/apple-touch-icon.png",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/default-news.jpg",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/default-share.jpg",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/logo.jpg",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/icon-192.png",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/icon-512.png",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/icon-maskable.png",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/api/news/digest",
       "destination": "/api/index"
     },
     {
@@ -34,7 +100,11 @@
       "destination": "/api/index?filename=:filename"
     },
     {
-      "source": "/((?!api|.*\\..*).*)",
+      "source": "/api/:path*",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/((?!api|assets|src|.*\\..*).*)",
       "destination": "/api/index"
     }
   ]
