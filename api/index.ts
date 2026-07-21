@@ -8,28 +8,28 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Import all non-serverless handlers with .js extension for ES Module compatibility
-import healthHandler from "../server-api/health";
-import articlesHandler from "../server-api/articles";
-import { generateNewsDigest } from "../server-api/news-digest";
-import robotsHandler from "../server-api/robots";
-import sitemapHandler from "../server-api/sitemap";
-import googleVerifyHandler from "../server-api/google-verify";
-import uploadsHandler from "../server-api/uploads";
-import assistantHandler from "../server-api/gemini/assistant";
-import moderateHandler from "../server-api/gemini/moderate";
-import chatHandler from "../server-api/gemini/chat";
-import uploadRawHandler from "../server-api/livestream/upload-raw";
-import uploadHandler from "../server-api/livestream/upload";
-import frameHandler from "../server-api/livestream/frame";
-import settingsHandler from "../server-api/livestream/settings";
-import valasLatestHandler from "../server-api/valas/latest";
-import supabaseConfigHandler from "../server-api/supabase/config";
+import healthHandler from "../server-api/health.js";
+import articlesHandler from "../server-api/articles.js";
+import { generateNewsDigest } from "../server-api/news-digest.js";
+import robotsHandler from "../server-api/robots.js";
+import sitemapHandler from "../server-api/sitemap.js";
+import googleVerifyHandler from "../server-api/google-verify.js";
+import uploadsHandler from "../server-api/uploads.js";
+import assistantHandler from "../server-api/gemini/assistant.js";
+import moderateHandler from "../server-api/gemini/moderate.js";
+import chatHandler from "../server-api/gemini/chat.js";
+import uploadRawHandler from "../server-api/livestream/upload-raw.js";
+import uploadHandler from "../server-api/livestream/upload.js";
+import frameHandler from "../server-api/livestream/frame.js";
+import settingsHandler from "../server-api/livestream/settings.js";
+import valasLatestHandler from "../server-api/valas/latest.js";
+import supabaseConfigHandler from "../server-api/supabase/config.js";
 import sharesHandler from "../server-api/shares.js";
-import sharesIncrementHandler from "../server-api/shares/increment";
-import seoSettingsHandler from "../server-api/seo/settings";
+import sharesIncrementHandler from "../server-api/shares/increment.js";
+import seoSettingsHandler from "../server-api/seo/settings.js";
 
-import { getSeoSettingsDb } from "../lib/supabase-service";
-import { handleSEORouting } from "../server/middleware/seo";
+import { getSeoSettingsDb } from "../lib/supabase-service.js";
+import { handleSEORouting } from "../server/middleware/seo.js";
 
 const app = express();
 
