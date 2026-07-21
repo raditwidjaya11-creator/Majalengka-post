@@ -308,6 +308,40 @@ app.all("/api/shares", sharesHandler);
 app.all("/api/uploads", uploadsHandler);
 app.all("/uploads/:filename", uploadsHandler);
 
+// Static Public & Dist Assets (PWA Icons, Manifest, SW, Images)
+app.get([
+  "/icon-192.png",
+  "/icon-512.png",
+  "/icon-maskable.png",
+  "/apple-touch-icon.png",
+  "/favicon.ico",
+  "/favicon.png",
+  "/manifest.json",
+  "/sw.js",
+  "/logo.jpg",
+  "/default-news.jpg",
+  "/default-share.jpg"
+], (req, res) => {
+  const filename = path.basename(req.path);
+  const possiblePaths = [
+    path.join(process.cwd(), "public", filename),
+    path.join(process.cwd(), "dist", filename),
+    path.join(__dirname, "..", "public", filename),
+    path.join(__dirname, "..", "dist", filename)
+  ];
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      if (filename.endsWith(".json")) res.setHeader("Content-Type", "application/json");
+      else if (filename.endsWith(".png")) res.setHeader("Content-Type", "image/png");
+      else if (filename.endsWith(".jpg") || filename.endsWith(".jpeg")) res.setHeader("Content-Type", "image/jpeg");
+      else if (filename.endsWith(".ico")) res.setHeader("Content-Type", "image/x-icon");
+      else if (filename.endsWith(".js")) res.setHeader("Content-Type", "application/javascript");
+      return res.sendFile(p);
+    }
+  }
+  return res.status(404).send("File not found");
+});
+
 // SEO Files routes
 app.all("/robots.txt", robotsHandler);
 app.all("/sitemap.xml", sitemapHandler);

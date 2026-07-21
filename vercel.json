@@ -4,7 +4,7 @@
   "trailingSlash": false,
   "functions": {
     "api/index.ts": {
-      "includeFiles": "{dist/**,api/index-template.html}"
+      "includeFiles": "{dist/**,public/**,api/index-template.html}"
     }
   },
   "headers": [

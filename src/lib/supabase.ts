@@ -39,19 +39,24 @@ export function getIsSupabaseConfigured(): boolean {
   return isSupabaseConfigured;
 }
 
+let currentSupabaseUrl = hasValidSupabaseUrl ? supabaseUrl : dummyUrl;
+let currentSupabaseKey = (hasValidSupabaseUrl && supabaseAnonKey) ? supabaseAnonKey : dummyKey;
+
 export let supabase: any;
 try {
-  supabase = createClient(
-    hasValidSupabaseUrl ? supabaseUrl : dummyUrl,
-    (hasValidSupabaseUrl && supabaseAnonKey) ? supabaseAnonKey : dummyKey
-  );
+  supabase = createClient(currentSupabaseUrl, currentSupabaseKey);
 } catch (e) {
   supabase = createClient(dummyUrl, dummyKey);
 }
 
 export function initializeSupabase(url: string, key: string): boolean {
   if (url && isValidUrl(url) && key) {
+    if (url === currentSupabaseUrl && key === currentSupabaseKey && isSupabaseConfigured) {
+      return true; // Singleton protection: already initialized with identical credentials
+    }
     try {
+      currentSupabaseUrl = url;
+      currentSupabaseKey = key;
       supabase = createClient(url, key);
       isSupabaseConfigured = true;
       return true;

@@ -170,10 +170,7 @@ export default function PublicPortal({
     setIsDigestLoading(true);
     setDigestError(null);
     try {
-      // Fetch news-digest directly
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
-      const res = await fetch("/api/news-digest", { signal: controller.signal }).finally(() => clearTimeout(timeoutId));
+      const res = await fetch("/api/news-digest");
       if (!res.ok) {
         throw new Error(`Status ${res.status}`);
       }
@@ -184,7 +181,9 @@ export default function PublicPortal({
       }
       throw new Error("Invalid digest response");
     } catch (err: any) {
-      console.warn("API news digest fallback triggered:", err?.message || err);
+      if (err?.name !== "AbortError") {
+        console.log("[News Digest] Using instant client bulletin generator.");
+      }
       // Fallback local digest using articles available in props
       const top3 = articles.slice(0, 3);
       const formattedDate = new Date().toLocaleDateString("id-ID", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });

@@ -17,45 +17,36 @@ function getSupabaseClient() {
   return null;
 }
 
+let cachedDigestResponse: any = null;
+let cachedDigestTime: number = 0;
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes cache
+
 export default async function handler(req: any, res: any) {
   console.log("[API LOG] GET /api/news-digest called");
+
+  // Serve from cache if valid and fresh (< 10 mins)
+  if (cachedDigestResponse && (Date.now() - cachedDigestTime < CACHE_TTL_MS)) {
+    console.log("[API LOG] Serving news digest from 10-min cache.");
+    return res.status(200).json(cachedDigestResponse);
+  }
   
   let articles: any[] = [];
   let isFromSupabase = false;
   let lastError: any = null;
 
-  // 1. Fetch article data from Supabase with proper async/await, error handling, verifying response status, and retry logic
+  // 1. Fetch article data from Supabase
   const supabaseClient = getSupabaseClient();
   if (supabaseClient) {
-    const maxRetries = 3;
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        console.log(`[API LOG] Attempting to fetch articles from Supabase (Attempt ${attempt}/${maxRetries})...`);
-        
-        // Fetching articles using proper async/await
-        const response = await supabaseClient
-          .from("articles")
-          .select("*")
-          .order("date", { ascending: false });
+    try {
+      console.log(`[API LOG] Fetching articles from Supabase for news digest...`);
+      const response = await supabaseClient
+        .from("articles")
+        .select("*")
+        .order("date", { ascending: false })
+        .limit(15);
 
-        // Verifying response status and error from Supabase
-        const { data, error, status, statusText } = response;
-        
-        if (error) {
-          throw new Error(`Supabase returned error: ${error.message} (code: ${error.code})`);
-        }
-
-        if (status < 200 || status >= 300) {
-          throw new Error(`Supabase HTTP status error: ${status} - ${statusText || "Unknown status text"}`);
-        }
-
-        if (!data) {
-          throw new Error("Supabase response succeeded but data was empty/null.");
-        }
-
-        console.log(`[API LOG] Successfully fetched ${data.length} articles from Supabase with status ${status}`);
-        
-        // Parse JSON fields safely if they are strings
+      const { data, error } = response;
+      if (!error && data && data.length > 0) {
         articles = data.map((item: any) => ({
           ...item,
           galleryImages: typeof item.galleryImages === "string" ? JSON.parse(item.galleryImages) : (item.galleryImages || []),
@@ -64,22 +55,12 @@ export default async function handler(req: any, res: any) {
           gpsCoords: typeof item.gpsCoords === "string" ? JSON.parse(item.gpsCoords) : item.gpsCoords,
           seo: typeof item.seo === "string" ? JSON.parse(item.seo) : item.seo,
         }));
-        
         isFromSupabase = true;
-        break; // Success! Break the retry loop.
-      } catch (err: any) {
-        lastError = err;
-        console.error(`[API LOG] Supabase fetch attempt ${attempt} failed:`, err.message || err);
-        
-        if (attempt < maxRetries) {
-          const delay = attempt * 1000;
-          console.log(`[API LOG] Retrying in ${delay}ms...`);
-          await new Promise((resolve) => setTimeout(resolve, delay));
-        }
       }
+    } catch (err: any) {
+      lastError = err;
+      console.warn("[API LOG] Supabase fetch failed for news-digest:", err.message || err);
     }
-  } else {
-    console.warn("[API LOG] Supabase is not configured. Falling back to local data.");
   }
 
   // 2. Wrap all parsing, fallback, and AI logic in a try/catch block to guarantee a clean JSON response and prevent any 500 errors
@@ -176,14 +157,17 @@ Tulis dalam Bahasa Indonesia yang segar dan profesional, serta tambahkan emoji y
 
         if (aiResponse && aiResponse.text) {
           console.log("[API LOG] Gemini AI bulletin generated successfully.");
-          return res.status(200).json({
+          const responsePayload = {
             success: true,
             bulletin: aiResponse.text,
             articles: cleanArticles,
             source: "gemini-ai",
             isFromSupabase,
             generatedAt: new Date().toISOString()
-          });
+          };
+          cachedDigestResponse = responsePayload;
+          cachedDigestTime = Date.now();
+          return res.status(200).json(responsePayload);
         }
       } catch (aiErr: any) {
         console.error("[API LOG] Gemini generation failed, switching to local template formatting:", aiErr.message || aiErr);
@@ -202,7 +186,7 @@ Tulis dalam Bahasa Indonesia yang segar dan profesional, serta tambahkan emoji y
       }).join("\n\n") +
       `\n\n✨ *Cepat, Akurat, Terpercaya!* Baca selengkapnya langsung di portal berita Majalengka Post.`;
 
-    return res.status(200).json({
+    const fallbackPayload = {
       success: true,
       bulletin: fallbackBulletin,
       articles: cleanArticles,
@@ -210,7 +194,10 @@ Tulis dalam Bahasa Indonesia yang segar dan profesional, serta tambahkan emoji y
       isFromSupabase,
       generatedAt: new Date().toISOString(),
       ...(lastError ? { fetchError: lastError.message } : {})
-    });
+    };
+    cachedDigestResponse = fallbackPayload;
+    cachedDigestTime = Date.now();
+    return res.status(200).json(fallbackPayload);
 
   } catch (handlerErr: any) {
     console.error("[API LOG] Critical error inside news-digest handler try-catch block:", handlerErr);
