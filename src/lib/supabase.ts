@@ -157,6 +157,43 @@ export async function deleteBannerFromSupabase(id: string): Promise<void> {
 
 /**
  * ==========================================
+ * 2b. OPENING BANNERS SERVICES (PROXIED)
+ * ==========================================
+ */
+
+export async function fetchOpeningBannersFromSupabase(): Promise<any[]> {
+  const res = await fetch("/api/opening-banners");
+  if (!res.ok) throw new Error("Gagal mengambil data opening banner");
+  const data = await res.json();
+  return data.banners || [];
+}
+
+export async function upsertOpeningBannersToSupabase(banners: any[]): Promise<void> {
+  const res = await fetch("/api/opening-banners", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ banners })
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || "Gagal menyimpan opening banner");
+  }
+}
+
+export async function deleteOpeningBannerFromSupabase(id: string): Promise<void> {
+  const res = await fetch("/api/opening-banners/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id })
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || "Gagal menghapus opening banner");
+  }
+}
+
+/**
+ * ==========================================
  * 3. MEDIA ITEMS SERVICES (PROXIED)
  * ==========================================
  */
@@ -472,4 +509,36 @@ DROP POLICY IF EXISTS "Allow public read" ON company_info;
 DROP POLICY IF EXISTS "Allow public write" ON company_info;
 CREATE POLICY "Allow public read" ON company_info FOR SELECT USING (true);
 CREATE POLICY "Allow public write" ON company_info FOR ALL USING (true);
+
+-- 7. Table: opening_banners
+CREATE TABLE IF NOT EXISTS opening_banners (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  subtitle TEXT,
+  image_url TEXT NOT NULL,
+  button_text TEXT DEFAULT 'Baca Selengkapnya',
+  button_link TEXT DEFAULT '#',
+  is_active BOOLEAN DEFAULT true,
+  status TEXT DEFAULT 'published',
+  start_date TIMESTAMP WITH TIME ZONE,
+  end_date TIMESTAMP WITH TIME ZONE,
+  display_position TEXT DEFAULT 'center',
+  animation TEXT DEFAULT 'zoom',
+  animation_duration NUMERIC DEFAULT 0.4,
+  overlay_color TEXT DEFAULT '#000000',
+  overlay_opacity NUMERIC DEFAULT 0.65,
+  display_interval TEXT DEFAULT 'always',
+  show_once BOOLEAN DEFAULT false,
+  page_target TEXT DEFAULT 'all',
+  sort_order INTEGER DEFAULT 1,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Enable Row Level Security & Create Access Policies
+ALTER TABLE opening_banners ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read" ON opening_banners;
+DROP POLICY IF EXISTS "Allow public write" ON opening_banners;
+CREATE POLICY "Allow public read" ON opening_banners FOR SELECT USING (true);
+CREATE POLICY "Allow public write" ON opening_banners FOR ALL USING (true);
 `;

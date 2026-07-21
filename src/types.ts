@@ -149,3 +149,40 @@ export interface ValasRate {
   change: string;
 }
 
+export type OpeningBannerPosition = "center" | "bottom_right" | "bottom_left" | "fullscreen";
+export type OpeningBannerAnimation = "fade" | "zoom" | "slide_up" | "bounce";
+export type OpeningBannerPageTarget = "home" | "dashboard" | "all" | "article";
+export type OpeningBannerInterval = "always" | "1h" | "6h" | "12h" | "24h";
+
+export interface OpeningBanner {
+  id: string;
+  title: string;
+  subtitle?: string;
+  subTitle?: string;
+  imageUrl: string;
+  buttonText: string;
+  buttonLink: string;
+  isActive: boolean;
+  status?: "published" | "draft";
+  startDate?: string | null;
+  endDate?: string | null;
+  displayPosition?: OpeningBannerPosition;
+  animation?: OpeningBannerAnimation;
+  animationDuration?: number;
+  animationStyle?: "zoom" | "fade" | "slide";
+  shadowStyle?: "soft" | "medium" | "glow";
+  overlayColor?: string;
+  overlayOpacity?: number;
+  displayInterval?: OpeningBannerInterval;
+  displayFrequency?: "once_per_session" | "always" | "once_per_day";
+  displayDelaySeconds?: number;
+  autoCloseSeconds?: number;
+  blurBackdrop?: boolean;
+  showOnce?: boolean;
+  pageTarget?: OpeningBannerPageTarget;
+  targetPages?: ("home" | "dashboard" | "all" | "article")[];
+  sortOrder?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+

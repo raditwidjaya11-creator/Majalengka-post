@@ -3,6 +3,7 @@ import { convertBase64ToUploadUrl } from "./vercel-storage.js";
 import {
   INITIAL_ARTICLES,
   INITIAL_BANNERS,
+  INITIAL_OPENING_BANNERS,
   INITIAL_MEDIA_ITEMS,
   INITIAL_POLL,
   DEFAULT_COMPANY_PROFILES
@@ -88,6 +89,26 @@ export const BANNER_MAPPINGS = {
   adUrl: ["adUrl", "adurl", "ad_url"],
   imageUrl: ["imageUrl", "imageurl", "image_url"],
   htmlContent: ["htmlContent", "htmlcontent", "html_content"]
+};
+
+export const OPENING_BANNER_MAPPINGS = {
+  subtitle: ["subtitle", "sub_title", "subTitle"],
+  imageUrl: ["imageUrl", "imageurl", "image_url"],
+  buttonText: ["buttonText", "buttontext", "button_text"],
+  buttonLink: ["buttonLink", "buttonlink", "button_link"],
+  isActive: ["isActive", "isactive", "is_active"],
+  startDate: ["startDate", "startdate", "start_date"],
+  endDate: ["endDate", "enddate", "end_date"],
+  displayPosition: ["displayPosition", "displayposition", "display_position"],
+  animationDuration: ["animationDuration", "animationduration", "animation_duration"],
+  overlayColor: ["overlayColor", "overlaycolor", "overlay_color"],
+  overlayOpacity: ["overlayOpacity", "overlayopacity", "overlay_opacity"],
+  displayInterval: ["displayInterval", "displayinterval", "display_interval"],
+  showOnce: ["showOnce", "showonce", "show_once"],
+  pageTarget: ["pageTarget", "pagetarget", "page_target"],
+  sortOrder: ["sortOrder", "sortorder", "sort_order"],
+  createdAt: ["createdAt", "createdat", "created_at"],
+  updatedAt: ["updatedAt", "updatedat", "updated_at"]
 };
 
 export const POLL_MAPPINGS = {
@@ -409,6 +430,133 @@ export async function deleteBanner(id: string) {
   const supabase = getSupabaseClient();
   if (!supabase) return;
   const { error } = await supabase.from("banners").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/**
+ * ==========================================
+ * 2b. OPENING BANNERS (SPLASH PROMO)
+ * ==========================================
+ */
+
+export async function fetchOpeningBanners() {
+  const supabase = getSupabaseClient();
+  if (supabase) {
+    try {
+      const fetchPromise = supabase.from("opening_banners").select("*").order("sort_order", { ascending: true });
+      const { data, error } = await withTimeout<any>(fetchPromise, 4000);
+      if (!error && data && data.length > 0) {
+        return data.map((b: any) => {
+          const item = normalizeObject(b, OPENING_BANNER_MAPPINGS);
+          return {
+            id: item.id,
+            title: item.title,
+            subtitle: item.subtitle || item.subTitle || "",
+            imageUrl: item.imageUrl || item.image_url || "",
+            buttonText: item.buttonText || item.button_text || "Baca Selengkapnya",
+            buttonLink: item.buttonLink || item.button_link || "#",
+            isActive: item.isActive !== undefined ? !!item.isActive : (item.is_active !== undefined ? !!item.is_active : true),
+            status: item.status || "published",
+            startDate: item.startDate || item.start_date || null,
+            endDate: item.endDate || item.end_date || null,
+            displayPosition: item.displayPosition || item.display_position || "center",
+            animation: item.animation || "zoom",
+            animationDuration: item.animationDuration || item.animation_duration || 0.4,
+            overlayColor: item.overlayColor || item.overlay_color || "#000000",
+            overlayOpacity: item.overlayOpacity !== undefined ? Number(item.overlayOpacity) : (item.overlay_opacity !== undefined ? Number(item.overlay_opacity) : 0.65),
+            displayInterval: item.displayInterval || item.display_interval || "always",
+            showOnce: item.showOnce !== undefined ? !!item.showOnce : (item.show_once !== undefined ? !!item.show_once : false),
+            pageTarget: item.pageTarget || item.page_target || "all",
+            sortOrder: Number(item.sortOrder || item.sort_order || 1),
+            createdAt: item.createdAt || item.created_at || new Date().toISOString(),
+            updatedAt: item.updatedAt || item.updated_at || new Date().toISOString()
+          };
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching opening banners in lib/db.ts:", err);
+    }
+  }
+  return INITIAL_OPENING_BANNERS;
+}
+
+export async function upsertOpeningBanners(banners: any[]) {
+  const camel = banners.map(b => ({
+    id: b.id,
+    title: b.title,
+    subtitle: b.subtitle || null,
+    imageUrl: b.imageUrl,
+    buttonText: b.buttonText || "Baca Selengkapnya",
+    buttonLink: b.buttonLink || "#",
+    isActive: !!b.isActive,
+    status: b.status || "published",
+    startDate: b.startDate || null,
+    endDate: b.endDate || null,
+    displayPosition: b.displayPosition || "center",
+    animation: b.animation || "zoom",
+    animationDuration: b.animationDuration || 0.4,
+    overlayColor: b.overlayColor || "#000000",
+    overlayOpacity: b.overlayOpacity !== undefined ? Number(b.overlayOpacity) : 0.65,
+    displayInterval: b.displayInterval || "always",
+    showOnce: !!b.showOnce,
+    pageTarget: b.pageTarget || "all",
+    sortOrder: Number(b.sortOrder || 1),
+    updatedAt: new Date().toISOString()
+  }));
+
+  const lower = banners.map(b => ({
+    id: b.id,
+    title: b.title,
+    subtitle: b.subtitle || null,
+    imageurl: b.imageUrl,
+    buttontext: b.buttonText || "Baca Selengkapnya",
+    buttonlink: b.buttonLink || "#",
+    isactive: !!b.isActive,
+    status: b.status || "published",
+    startdate: b.startDate || null,
+    enddate: b.endDate || null,
+    displayposition: b.displayPosition || "center",
+    animation: b.animation || "zoom",
+    animationduration: b.animationDuration || 0.4,
+    overlaycolor: b.overlayColor || "#000000",
+    overlayopacity: b.overlayOpacity !== undefined ? Number(b.overlayOpacity) : 0.65,
+    displayinterval: b.displayInterval || "always",
+    showonce: !!b.showOnce,
+    pagetarget: b.pageTarget || "all",
+    sortorder: Number(b.sortOrder || 1),
+    updatedat: new Date().toISOString()
+  }));
+
+  const snake = banners.map(b => ({
+    id: b.id,
+    title: b.title,
+    subtitle: b.subtitle || null,
+    image_url: b.imageUrl,
+    button_text: b.buttonText || "Baca Selengkapnya",
+    button_link: b.buttonLink || "#",
+    is_active: !!b.isActive,
+    status: b.status || "published",
+    start_date: b.startDate || null,
+    end_date: b.endDate || null,
+    display_position: b.displayPosition || "center",
+    animation: b.animation || "zoom",
+    animation_duration: b.animationDuration || 0.4,
+    overlay_color: b.overlayColor || "#000000",
+    overlay_opacity: b.overlayOpacity !== undefined ? Number(b.overlayOpacity) : 0.65,
+    display_interval: b.displayInterval || "always",
+    show_once: !!b.showOnce,
+    page_target: b.pageTarget || "all",
+    sort_order: Number(b.sortOrder || 1),
+    updated_at: new Date().toISOString()
+  }));
+
+  await robustUpsert("opening_banners", { camel, lower, snake });
+}
+
+export async function deleteOpeningBanner(id: string) {
+  const supabase = getSupabaseClient();
+  if (!supabase) return;
+  const { error } = await supabase.from("opening_banners").delete().eq("id", id);
   if (error) throw error;
 }
 

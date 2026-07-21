@@ -1,4 +1,4 @@
-import { Article, ArticleStatus, Comment, AdBanner, MediaItem, InternalNotification, Poll } from "./types.js";
+import { Article, ArticleStatus, Comment, AdBanner, MediaItem, InternalNotification, Poll, OpeningBanner } from "./types.js";
 
 export const CATEGORIES = [
   "Nasional", "Politik", "Pemerintahan", "Daerah", "Hukum", "Kriminal", 
@@ -673,5 +673,31 @@ export const DEFAULT_COMPANY_PROFILES = [
       <p><strong>Hotline Marketing:</strong> +62 853-9876-5432 (Call/WA)<br/><strong>Email Pemasaran:</strong> marketing@majalengkapost.co.id</p>
     `,
     lastUpdated: "2026-07-14T04:00:00Z"
+  }
+];
+
+export const INITIAL_OPENING_BANNERS: OpeningBanner[] = [
+  {
+    id: "banner-opening-1",
+    title: "Selamat Datang di Majalengka Post",
+    subtitle: "Dapatkan berita terupdate, akurat, dan terpercaya seputar Majalengka & Nasional langsung di genggaman Anda.",
+    imageUrl: "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?q=80&w=1200&auto=format&fit=crop",
+    buttonText: "Jelajahi Berita Terbaru",
+    buttonLink: "#latest-news",
+    isActive: true,
+    status: "published",
+    startDate: null,
+    endDate: null,
+    displayPosition: "center",
+    animation: "zoom",
+    animationDuration: 0.4,
+    overlayColor: "#000000",
+    overlayOpacity: 0.65,
+    displayInterval: "always",
+    showOnce: false,
+    pageTarget: "all",
+    sortOrder: 1,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   }
 ];

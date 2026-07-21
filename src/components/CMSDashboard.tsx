@@ -6,11 +6,12 @@ import {
   Tag as TagIcon, CheckSquare, Bell, Megaphone, Smartphone, DollarSign,
   Briefcase, Activity, Calendar, ShieldCheck, ChevronRight, Upload
 } from "lucide-react";
-import { Article, ArticleStatus, UserRole, MediaItem, AdBanner, InternalNotification, AuditLog, ValasRate } from "../types";
+import { Article, ArticleStatus, UserRole, MediaItem, AdBanner, InternalNotification, AuditLog, ValasRate, OpeningBanner } from "../types";
 import { CATEGORIES, REALTIME_ANALYTICS } from "../mockData";
 import TiptapWordEditor from "./TiptapWordEditor";
 import ArticlePreviewModal from "./ArticlePreviewModal";
 import HorizontalBannerManager from "./HorizontalBannerManager";
+import OpeningBannerManager from "./OpeningBannerManager";
 import { CompanyProfilePage } from "./CompanyProfile";
 import { uploadFileToSupabaseStorage } from "../lib/supabase";
 // Removed SeoAnalyzer per user request: "jangan tampilkan sistem data se di dasshbor"
@@ -19,6 +20,7 @@ import { uploadFileToSupabaseStorage } from "../lib/supabase";
 interface CMSDashboardProps {
   articles: Article[];
   banners: AdBanner[];
+  openingBanners?: OpeningBanner[];
   activeRole: UserRole;
   mediaItems: MediaItem[];
   notifications: InternalNotification[];
@@ -28,6 +30,9 @@ interface CMSDashboardProps {
   onAddBanner: (banner: AdBanner) => void;
   onUpdateBanner: (banner: AdBanner) => void;
   onDeleteBanner: (id: string) => void;
+  onSaveOpeningBanner?: (banner: OpeningBanner) => Promise<void>;
+  onDeleteOpeningBanner?: (id: string) => Promise<void>;
+  onToggleOpeningBannerActive?: (id: string, active: boolean) => Promise<void>;
   valasRates: ValasRate[];
   onUpdateValasRates: (rates: ValasRate[]) => void;
   onAddMedia?: (item: MediaItem) => void;
@@ -74,24 +79,25 @@ const COVER_PRESETS = [
   }
 ];
 
-const ROLE_TABS: Record<UserRole, Array<"analytics" | "workflow" | "editor" | "media" | "ads" | "alerts" | "settings" | "company">> = {
-  [UserRole.SUPER_ADMIN]: ["analytics", "workflow", "editor", "media", "ads", "alerts", "settings", "company"],
-  [UserRole.PEMILIK]: ["analytics", "workflow", "media", "ads", "company"],
-  [UserRole.PEMIMPIN_REDAKSI]: ["analytics", "workflow", "editor", "media", "alerts", "settings", "company"],
-  [UserRole.REDAKTUR]: ["workflow", "editor", "media", "company"],
+const ROLE_TABS: Record<UserRole, Array<"analytics" | "workflow" | "editor" | "media" | "opening_banner" | "ads" | "alerts" | "settings" | "company">> = {
+  [UserRole.SUPER_ADMIN]: ["analytics", "workflow", "editor", "media", "opening_banner", "ads", "alerts", "settings", "company"],
+  [UserRole.PEMILIK]: ["analytics", "workflow", "media", "opening_banner", "ads", "company"],
+  [UserRole.PEMIMPIN_REDAKSI]: ["analytics", "workflow", "editor", "media", "opening_banner", "alerts", "settings", "company"],
+  [UserRole.REDAKTUR]: ["workflow", "editor", "media", "opening_banner", "company"],
   [UserRole.EDITOR]: ["workflow", "editor", "media", "company"],
   [UserRole.WARTAWAN]: ["workflow", "editor"],
   [UserRole.KONTRIBUTOR]: ["workflow", "editor"],
   [UserRole.FOTOGRAFER]: ["media"],
   [UserRole.VIDEOGRAFER]: ["media"],
   [UserRole.SOCIAL_MEDIA_ADMIN]: ["analytics", "workflow", "alerts"],
-  [UserRole.IKLAN]: ["analytics", "ads"],
+  [UserRole.IKLAN]: ["analytics", "ads", "opening_banner"],
   [UserRole.KEUANGAN]: ["analytics"],
 };
 
 export default function CMSDashboard({
   articles,
   banners,
+  openingBanners = [],
   activeRole,
   mediaItems,
   notifications,
@@ -101,6 +107,9 @@ export default function CMSDashboard({
   onAddBanner,
   onUpdateBanner,
   onDeleteBanner,
+  onSaveOpeningBanner,
+  onDeleteOpeningBanner,
+  onToggleOpeningBannerActive,
   valasRates,
   onUpdateValasRates,
   onAddMedia,
@@ -117,7 +126,7 @@ export default function CMSDashboard({
 }: CMSDashboardProps) {
   
   // Dashboard view tabs
-  const [activeTab, setActiveTab] = useState<"analytics" | "workflow" | "editor" | "media" | "ads" | "alerts" | "settings" | "company">("analytics");
+  const [activeTab, setActiveTab] = useState<"analytics" | "workflow" | "editor" | "media" | "opening_banner" | "ads" | "alerts" | "settings" | "company">("analytics");
 
   const allowedTabs = ROLE_TABS[activeRole] || ["analytics"];
 
@@ -1036,11 +1045,12 @@ export default function CMSDashboard({
             { id: "workflow", label: "Workflow Redaksi", icon: <LayoutList className="w-4 h-4" /> },
             { id: "editor", label: "Input Berita & AI", icon: <FilePlus2 className="w-4 h-4" /> },
             { id: "media", label: "Media Library", icon: <ImageIcon className="w-4 h-4" /> },
+            { id: "opening_banner", label: "Banner Pembuka", icon: <Sparkles className="w-4 h-4" /> },
             { id: "ads", label: "Banner Iklan", icon: <Sliders className="w-4 h-4" /> },
             { id: "company", label: "Profil Perusahaan", icon: <Briefcase className="w-4 h-4" /> },
             { id: "alerts", label: "Push Notifikasi", icon: <Bell className="w-4 h-4" /> },
             { id: "settings", label: "Pengaturan PIN", icon: <Settings className="w-4 h-4" /> },
-          ] as Array<{ id: "analytics" | "workflow" | "editor" | "media" | "ads" | "alerts" | "settings" | "company"; label: string; icon: React.ReactNode }>)
+          ] as Array<{ id: "analytics" | "workflow" | "editor" | "media" | "opening_banner" | "ads" | "alerts" | "settings" | "company"; label: string; icon: React.ReactNode }>)
             .filter(tab => allowedTabs.includes(tab.id))
             .map(tab => (
                <button
@@ -2156,6 +2166,16 @@ export default function CMSDashboard({
             </div>
 
           </div>
+        )}
+
+        {/* ================= TAB 4b: FLOATING OPENING BANNER / SPLASH PROMO ================= */}
+        {activeTab === "opening_banner" && (
+          <OpeningBannerManager
+            banners={openingBanners}
+            onSaveBanner={onSaveOpeningBanner || (async () => {})}
+            onDeleteBanner={onDeleteOpeningBanner || (async () => {})}
+            onToggleActive={onToggleOpeningBannerActive || (async () => {})}
+          />
         )}
 
         {/* ================= TAB 5: BANNER ADVERTISEMENT & KURS VALAS MANAGER ================= */}

@@ -6,10 +6,12 @@ import PublicPortal from "./components/PublicPortal";
 import CMSDashboard from "./components/CMSDashboard";
 import MobilePremiumApp from "./components/MobilePremiumApp";
 import ThemeConfigurator, { PresetTheme, THEME_PRESETS } from "./components/ThemeConfigurator";
-import { Article, ArticleStatus, UserRole, AdBanner, MediaItem, InternalNotification, Poll, ValasRate } from "./types";
+import OpeningBannerModal from "./components/OpeningBannerModal";
+import { Article, ArticleStatus, UserRole, AdBanner, MediaItem, InternalNotification, Poll, ValasRate, OpeningBanner } from "./types";
 import { 
   INITIAL_ARTICLES, 
   INITIAL_BANNERS, 
+  INITIAL_OPENING_BANNERS,
   INITIAL_MEDIA_ITEMS, 
   INITIAL_NOTIFICATIONS, 
   INITIAL_POLL,
@@ -33,6 +35,9 @@ import {
   fetchBannersFromSupabase,
   upsertBannersToSupabase,
   deleteBannerFromSupabase,
+  fetchOpeningBannersFromSupabase,
+  upsertOpeningBannersToSupabase,
+  deleteOpeningBannerFromSupabase,
   fetchMediaFromSupabase,
   upsertMediaToSupabase,
   fetchPollFromSupabase,
@@ -109,6 +114,25 @@ export default function App() {
     }
     return INITIAL_BANNERS;
   });
+
+  const [openingBanners, setOpeningBanners] = useState<OpeningBanner[]>(() => {
+    try {
+      const saved = safeLocalStorage.getItem("majalengkapost_opening_banners");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.filter(item => item && typeof item === "object");
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to parse local opening banners:", e);
+    }
+    return INITIAL_OPENING_BANNERS;
+  });
+
+  useEffect(() => {
+    safeLocalStorage.setItem("majalengkapost_opening_banners", JSON.stringify(openingBanners));
+  }, [openingBanners]);
 
   const [valasRates, setValasRates] = useState<ValasRate[]>(() => {
     try {
@@ -875,6 +899,20 @@ export default function App() {
           setBanners(INITIAL_BANNERS);
         }
 
+        // 2b. Fetch opening banners (splash promo)
+        try {
+          const fetchedOpening = await fetchOpeningBannersFromSupabase();
+          if (fetchedOpening.length === 0) {
+            await upsertOpeningBannersToSupabase(INITIAL_OPENING_BANNERS).catch(() => {});
+            setOpeningBanners(INITIAL_OPENING_BANNERS);
+          } else {
+            setOpeningBanners(fetchedOpening);
+          }
+        } catch (err: any) {
+          console.warn("Using offline opening banners fallback:", err?.message || err);
+          setOpeningBanners(INITIAL_OPENING_BANNERS);
+        }
+
         // 3. Fetch media items
         let fetchedMedia: MediaItem[] = [];
         try {
@@ -1203,6 +1241,50 @@ export default function App() {
           setSupabaseErrorMsg(err.message || "Tabel 'banners' belum terbuat di database.");
         }
       });
+    }
+  };
+
+  const handleSaveOpeningBanner = async (banner: OpeningBanner) => {
+    setOpeningBanners(prev => {
+      const exists = prev.some(b => b.id === banner.id);
+      if (exists) {
+        return prev.map(b => b.id === banner.id ? banner : b);
+      }
+      return [banner, ...prev];
+    });
+
+    try {
+      await upsertOpeningBannersToSupabase([banner]);
+    } catch (err: any) {
+      console.warn("Gagal menyimpan opening banner ke Supabase:", err?.message || err);
+    }
+  };
+
+  const handleDeleteOpeningBanner = async (id: string) => {
+    setOpeningBanners(prev => prev.filter(b => b.id !== id));
+    try {
+      await deleteOpeningBannerFromSupabase(id);
+    } catch (err: any) {
+      console.warn("Gagal menghapus opening banner dari Supabase:", err?.message || err);
+    }
+  };
+
+  const handleToggleOpeningBannerActive = async (id: string, active: boolean) => {
+    let updatedBanner: OpeningBanner | null = null;
+    setOpeningBanners(prev => prev.map(b => {
+      if (b.id === id) {
+        updatedBanner = { ...b, isActive: active, updatedAt: new Date().toISOString() };
+        return updatedBanner;
+      }
+      return b;
+    }));
+
+    if (updatedBanner) {
+      try {
+        await upsertOpeningBannersToSupabase([updatedBanner]);
+      } catch (err: any) {
+        console.warn("Gagal memperbarui status aktif opening banner:", err?.message || err);
+      }
     }
   };
 
@@ -1588,6 +1670,7 @@ export default function App() {
             <CMSDashboard
               articles={articles}
               banners={banners}
+              openingBanners={openingBanners}
               activeRole={activeRole}
               mediaItems={mediaItems}
               notifications={notifications}
@@ -1597,6 +1680,9 @@ export default function App() {
               onAddBanner={handleAddBanner}
               onUpdateBanner={handleUpdateBanner}
               onDeleteBanner={handleDeleteBanner}
+              onSaveOpeningBanner={handleSaveOpeningBanner}
+              onDeleteOpeningBanner={handleDeleteOpeningBanner}
+              onToggleOpeningBannerActive={handleToggleOpeningBannerActive}
               valasRates={valasRates}
               onUpdateValasRates={setValasRates}
               onAddMedia={handleAddMedia}
@@ -1861,6 +1947,7 @@ export default function App() {
             <CMSDashboard
               articles={articles}
               banners={banners}
+              openingBanners={openingBanners}
               activeRole={activeRole}
               mediaItems={mediaItems}
               notifications={notifications}
@@ -1870,6 +1957,9 @@ export default function App() {
               onAddBanner={handleAddBanner}
               onUpdateBanner={handleUpdateBanner}
               onDeleteBanner={handleDeleteBanner}
+              onSaveOpeningBanner={handleSaveOpeningBanner}
+              onDeleteOpeningBanner={handleDeleteOpeningBanner}
+              onToggleOpeningBannerActive={handleToggleOpeningBannerActive}
               valasRates={valasRates}
               onUpdateValasRates={setValasRates}
               onAddMedia={handleAddMedia}
@@ -3079,6 +3169,12 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Floating Opening Banner / Splash Promo Modal */}
+      <OpeningBannerModal
+        banners={openingBanners}
+        currentPage={currentPath || (typeof window !== "undefined" ? window.location.pathname : "/")}
+      />
     </div>
   );
 }

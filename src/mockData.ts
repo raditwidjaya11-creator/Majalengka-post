@@ -1,4 +1,4 @@
-import { Article, ArticleStatus, Comment, AdBanner, MediaItem, InternalNotification, Poll } from "./types";
+import { Article, ArticleStatus, Comment, AdBanner, MediaItem, InternalNotification, Poll, OpeningBanner } from "./types";
 
 export const CATEGORIES = [
   "Nasional", "Politik", "Pemerintahan", "Daerah", "Hukum", "Kriminal", 
@@ -969,6 +969,26 @@ export const DEFAULT_COMPANY_PROFILES = [
       </ul>
     `,
     lastUpdated: "2026-07-17T08:00:00Z"
+  }
+];
+
+export const INITIAL_OPENING_BANNERS: OpeningBanner[] = [
+  {
+    id: "banner-opening-1",
+    title: "Selamat Datang di Portal Berita Utama Majalengka Post",
+    subTitle: "Dapatkan akses eksklusif laporan khusus, liputan mendalam, dan siaran berita terkini langsung di perangkat Anda.",
+    imageUrl: "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?q=80&w=1200",
+    buttonText: "Baca Laporan Khusus",
+    buttonLink: "/kategori/nasional",
+    isActive: true,
+    targetPages: ["home", "dashboard", "all"],
+    displayFrequency: "once_per_session",
+    displayDelaySeconds: 1,
+    blurBackdrop: true,
+    animationStyle: "zoom",
+    shadowStyle: "soft",
+    overlayColor: "dark",
+    createdAt: new Date().toISOString()
   }
 ];
 

@@ -35,6 +35,9 @@ import {
   fetchBanners,
   upsertBanners,
   deleteBanner,
+  fetchOpeningBanners,
+  upsertOpeningBanners,
+  deleteOpeningBanner,
   fetchMediaItems,
   upsertMediaItems,
   deleteMediaItem,
@@ -188,6 +191,45 @@ app.post("/api/banners/delete", async (req, res) => {
     return res.json({ success: true, message: "Banner deleted successfully" });
   } catch (err: any) {
     console.error("Error deleting banner in serverless API:", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Opening Banners API
+app.get("/api/opening-banners", async (req, res) => {
+  try {
+    const banners = await fetchOpeningBanners();
+    return res.json({ success: true, count: banners.length, banners });
+  } catch (err: any) {
+    console.error("Error fetching opening banners in serverless API:", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post("/api/opening-banners", async (req, res) => {
+  try {
+    const { banners } = req.body || {};
+    if (!Array.isArray(banners)) {
+      return res.status(400).json({ success: false, error: "banners must be an array." });
+    }
+    await upsertOpeningBanners(banners);
+    return res.json({ success: true, message: "Opening banners upserted successfully" });
+  } catch (err: any) {
+    console.error("Error upserting opening banners in serverless API:", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post("/api/opening-banners/delete", async (req, res) => {
+  try {
+    const { id } = req.body || {};
+    if (!id) {
+      return res.status(400).json({ success: false, error: "id is required." });
+    }
+    await deleteOpeningBanner(id);
+    return res.json({ success: true, message: "Opening banner deleted successfully" });
+  } catch (err: any) {
+    console.error("Error deleting opening banner in serverless API:", err);
     return res.status(500).json({ success: false, error: err.message });
   }
 });
