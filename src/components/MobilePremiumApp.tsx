@@ -5,7 +5,8 @@ import {
   Volume2, Plus, CheckCircle2, RefreshCw, Layers, Calendar, Clock, Eye, 
   ThumbsUp, BookOpen, MessageSquare, ZoomIn, ZoomOut, Phone, MapPin, 
   Info, Camera, FileText, Globe, Radio, Settings, ShieldAlert, Database,
-  ArrowUpRight, Moon, Sun, Lock, Reply, CornerDownRight, ChevronDown, ChevronUp, X
+  ArrowUpRight, Moon, Sun, Lock, Reply, CornerDownRight, ChevronDown, ChevronUp, X,
+  VolumeX, Copy, Check, Mail
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Article, AdBanner, OpeningBanner, Poll, ValasRate, Comment, MediaItem, InternalNotification } from "../types";
@@ -728,6 +729,19 @@ export default function MobilePremiumApp({
   ]);
   const [newLiveMessage, setNewLiveMessage] = useState<string>("");
   const [liveViewerCount, setLiveViewerCount] = useState<number>(1340);
+
+  // Mobile Live Stream Audio & Sharing states
+  const [isLiveMuted, setIsLiveMuted] = useState<boolean>(false);
+  const [liveVolumeLevel, setLiveVolumeLevel] = useState<number>(80);
+  const [mobileLiveShareCopied, setMobileLiveShareCopied] = useState<boolean>(false);
+  const mobileLiveVideoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    if (mobileLiveVideoRef.current) {
+      mobileLiveVideoRef.current.muted = isLiveMuted;
+      mobileLiveVideoRef.current.volume = isLiveMuted ? 0 : liveVolumeLevel / 100;
+    }
+  }, [isLiveMuted, liveVolumeLevel]);
 
   // Handle splash delay
   useEffect(() => {
@@ -2245,11 +2259,11 @@ export default function MobilePremiumApp({
                     {liveStreamActive ? (
                       liveStreamType === "youtube" ? (
                         <iframe
-                          src={liveStreamUrl.includes("embed") ? `${liveStreamUrl}${liveStreamUrl.includes("?") ? "&" : "?"}autoplay=1&mute=1` : (() => {
+                          src={liveStreamUrl.includes("embed") ? `${liveStreamUrl}${liveStreamUrl.includes("?") ? "&" : "?"}autoplay=1&mute=${isLiveMuted ? 1 : 0}` : (() => {
                             const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
                             const match = liveStreamUrl.match(regExp);
                             if (match && match[2].length === 11) {
-                              return `https://www.youtube.com/embed/${match[2]}?autoplay=1&mute=1`;
+                              return `https://www.youtube.com/embed/${match[2]}?autoplay=1&mute=${isLiveMuted ? 1 : 0}&enablejsapi=1`;
                             }
                             return liveStreamUrl;
                           })()}
@@ -2274,10 +2288,11 @@ export default function MobilePremiumApp({
                       ) : (
                         // Custom direct video source (MP4 / HLS / WebM)
                         <video
+                          ref={mobileLiveVideoRef}
                           src={liveStreamUrl}
                           controls
                           autoPlay
-                          muted
+                          muted={isLiveMuted}
                           loop
                           playsInline
                           className="w-full h-full object-contain absolute inset-0 bg-slate-950"
@@ -2301,11 +2316,204 @@ export default function MobilePremiumApp({
                     <div className="absolute top-4 right-4 bg-black/60 text-white text-[9px] font-black px-2 py-1 rounded-sm backdrop-blur-xs z-10">
                       👁️ {liveViewerCount} Pemirsa
                     </div>
+
+                    {/* Quick Mute/Unmute Overlay Button on Video */}
+                    {liveStreamActive && (
+                      <button
+                        type="button"
+                        onClick={() => setIsLiveMuted(!isLiveMuted)}
+                        className="absolute bottom-3 right-3 bg-black/80 hover:bg-black/95 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-xl backdrop-blur-md flex items-center gap-1.5 border border-white/20 shadow-xl z-10 transition-all active:scale-95"
+                      >
+                        {isLiveMuted ? (
+                          <>
+                            <VolumeX className="w-3.5 h-3.5 text-red-400" />
+                            <span className="text-red-300 font-extrabold uppercase text-[9px]">Mute</span>
+                          </>
+                        ) : (
+                          <>
+                            <Volume2 className="w-3.5 h-3.5 text-green-400 animate-pulse" />
+                            <span className="text-green-300 font-extrabold uppercase text-[9px]">{liveVolumeLevel}%</span>
+                          </>
+                        )}
+                      </button>
+                    )}
                   </div>
 
+                  {/* Title & Info Banner */}
                   <div className="p-4 bg-slate-900 text-white border-t border-slate-800">
-                    <h4 className="text-xs font-black text-red-500 uppercase tracking-widest mb-1.5">Siaran Langsung Hari Ini</h4>
+                    <h4 className="text-xs font-black text-red-500 uppercase tracking-widest mb-1">Siaran Langsung Hari Ini</h4>
                     <p className="text-xs font-extrabold text-slate-200">{liveStreamTitle || "Sidang Paripurna DPR & Peninjauan Lokasi Bencana Tol Majalengka"}</p>
+
+                    {/* Volume Suara Interactive Controls */}
+                    <div className="mt-3.5 pt-3 border-t border-slate-800/80 bg-slate-950/60 p-3 rounded-2xl border border-slate-800">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                          {isLiveMuted ? <VolumeX className="w-3.5 h-3.5 text-red-400" /> : <Volume2 className="w-3.5 h-3.5 text-green-400" />}
+                          Pengaturan Volume Suara
+                        </span>
+                        <span className="text-[10px] font-bold font-mono text-slate-300 bg-slate-800 px-2 py-0.5 rounded">
+                          {isLiveMuted ? "Muted (0%)" : `${liveVolumeLevel}%`}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setIsLiveMuted(!isLiveMuted)}
+                          className={`px-3 py-1.5 rounded-xl text-[10px] font-extrabold uppercase tracking-wider flex items-center gap-1 transition-all ${
+                            isLiveMuted 
+                              ? "bg-red-950/80 text-red-400 border border-red-800/60" 
+                              : "bg-slate-800 text-slate-200 border border-slate-700"
+                          }`}
+                        >
+                          {isLiveMuted ? "Unmute" : "Mute"}
+                        </button>
+
+                        {/* Slider */}
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={isLiveMuted ? 0 : liveVolumeLevel}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            setLiveVolumeLevel(val);
+                            if (val > 0 && isLiveMuted) {
+                              setIsLiveMuted(false);
+                            } else if (val === 0) {
+                              setIsLiveMuted(true);
+                            }
+                          }}
+                          className="flex-1 accent-red-600 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer"
+                        />
+
+                        {/* Quick Presets */}
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            onClick={() => { setLiveVolumeLevel(50); setIsLiveMuted(false); }}
+                            className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] font-extrabold px-2 py-1 rounded"
+                          >
+                            50%
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setLiveVolumeLevel(100); setIsLiveMuted(false); }}
+                            className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] font-extrabold px-2 py-1 rounded"
+                          >
+                            100%
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Pembagian Link (Sharing Links Portal) */}
+                    <div className="mt-3.5 pt-3 border-t border-slate-800/80">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                          <Share2 className="w-3.5 h-3.5 text-red-400" /> Bagikan Siaran Langsung
+                        </span>
+                        {mobileLiveShareCopied && (
+                          <span className="text-[9px] text-green-400 font-bold bg-green-950/80 border border-green-800 px-2 py-0.5 rounded animate-fade-in flex items-center gap-1">
+                            <Check className="w-3 h-3 text-green-400" /> Tautan Tersalin!
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+                        {/* WhatsApp */}
+                        <a
+                          href={`https://wa.me/?text=${encodeURIComponent(`*🔴 LIVE STREAMING*: *${liveStreamTitle || "Majalengka Post TV"}*\n\nTonton siaran langsung sekarang:\n${window.location.origin}/?livetv=true`)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white text-[9.5px] font-extrabold px-2 py-1.5 rounded-xl flex items-center justify-center gap-1 uppercase tracking-wider transition-all"
+                        >
+                          WhatsApp
+                        </a>
+
+                        {/* Facebook */}
+                        <a
+                          href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.origin + "/?livetv=true")}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="bg-blue-600 hover:bg-blue-500 text-white text-[9.5px] font-extrabold px-2 py-1.5 rounded-xl flex items-center justify-center gap-1 uppercase tracking-wider transition-all"
+                        >
+                          Facebook
+                        </a>
+
+                        {/* Twitter / X */}
+                        <a
+                          href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`🔴 LIVE STREAMING: ${liveStreamTitle || "Majalengka Post TV"}`)}&url=${encodeURIComponent(window.location.origin + "/?livetv=true")}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="bg-sky-600 hover:bg-sky-500 text-white text-[9.5px] font-extrabold px-2 py-1.5 rounded-xl flex items-center justify-center gap-1 uppercase tracking-wider transition-all"
+                        >
+                          Twitter/X
+                        </a>
+
+                        {/* Telegram */}
+                        <a
+                          href={`https://t.me/share/url?url=${encodeURIComponent(window.location.origin + "/?livetv=true")}&text=${encodeURIComponent(`🔴 LIVE STREAMING: ${liveStreamTitle || "Majalengka Post TV"}`)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="bg-cyan-600 hover:bg-cyan-500 text-white text-[9.5px] font-extrabold px-2 py-1.5 rounded-xl flex items-center justify-center gap-1 uppercase tracking-wider transition-all"
+                        >
+                          Telegram
+                        </a>
+
+                        {/* Email */}
+                        <a
+                          href={`mailto:?subject=${encodeURIComponent(`Live Streaming Majalengka Post: ${liveStreamTitle || "Siaran Langsung"}`)}&body=${encodeURIComponent(`Saksikan siaran langsung Majalengka Post TV:\n${liveStreamTitle || "Siaran Langsung"}\n\nTonton di:\n${window.location.origin}/?livetv=true`)}`}
+                          className="bg-amber-600 hover:bg-amber-500 text-white text-[9.5px] font-extrabold px-2 py-1.5 rounded-xl flex items-center justify-center gap-1 uppercase tracking-wider transition-all"
+                        >
+                          <Mail className="w-3 h-3" />
+                          Email
+                        </a>
+
+                        {/* Salin Link */}
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              await navigator.clipboard.writeText(window.location.origin + "/?livetv=true");
+                              setMobileLiveShareCopied(true);
+                              setTimeout(() => setMobileLiveShareCopied(false), 2500);
+                            } catch {
+                              alert("Tautan live streaming berhasil disalin!");
+                            }
+                          }}
+                          className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-[9.5px] font-extrabold px-2 py-1.5 rounded-xl flex items-center justify-center gap-1 uppercase tracking-wider transition-all border border-slate-700"
+                        >
+                          <Copy className="w-3 h-3 text-red-400" />
+                          Salin
+                        </button>
+
+                        {/* Web Share / Lainnya */}
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const shareData = {
+                              title: `LIVE STREAMING: ${liveStreamTitle || "Majalengka Post TV"}`,
+                              text: `Saksikan siaran langsung Majalengka Post TV`,
+                              url: `${window.location.origin}/?livetv=true`
+                            };
+                            if (navigator.share) {
+                              try {
+                                await navigator.share(shareData);
+                              } catch {}
+                            } else {
+                              await navigator.clipboard.writeText(shareData.url);
+                              setMobileLiveShareCopied(true);
+                              setTimeout(() => setMobileLiveShareCopied(false), 2500);
+                            }
+                          }}
+                          className="col-span-1 sm:col-span-2 bg-red-600 hover:bg-red-500 text-white text-[9.5px] font-extrabold px-2 py-1.5 rounded-xl flex items-center justify-center gap-1 uppercase tracking-wider transition-all"
+                        >
+                          <Share2 className="w-3 h-3" />
+                          Lainnya...
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
