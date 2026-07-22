@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Group with subtle drop filter or crisp rendering -->
+  <g shape-rendering="geometricPrecision" text-rendering="geometricPrecision">
+    
+    <!-- 1. BLACK MONUMENT (Monumen Hitam) - Top Center (Tugu Majalengka Spire) -->
+    <!-- Base platform of monument -->
+    <path d="M 196 128 L 316 128 L 306 112 L 206 112 Z" fill="#111111" />
+    <path d="M 216 112 L 296 112 L 288 98 L 224 98 Z" fill="#111111" />
+    
+    <!-- Spire body (Left facet dark #111111, Right facet slightly lighter #2A2A2A for 3D monument depth) -->
+    <path d="M 224 98 L 256 98 L 256 16 L 236 98 Z" fill="#111111" />
+    <path d="M 256 98 L 288 98 L 276 98 L 256 16 Z" fill="#2A2A2A" />
+    <path d="M 236 98 L 256 98 L 256 16 Z" fill="#111111" />
+    <path d="M 256 98 L 276 98 L 256 16 Z" fill="#333333" />
+    <!-- Monument spire cap highlight -->
+    <polygon points="256,12 250,28 262,28" fill="#111111" />
+
+    <!-- 2. BOLD RED LETTER 'M' (Huruf M Merah - #D60000) -->
+    <!-- Left outer pillar -->
+    <path d="M 44 140 L 124 140 L 124 472 L 44 472 Z" fill="#D60000" />
+    <!-- Right outer pillar -->
+    <path d="M 388 140 L 468 140 L 468 472 L 388 472 Z" fill="#D60000" />
+    
+    <!-- Left diagonal slope -->
+    <path d="M 124 140 L 256 348 L 206 348 L 124 220 Z" fill="#D60000" />
+    <!-- Right diagonal slope -->
+    <path d="M 388 140 L 256 348 L 306 348 L 388 220 Z" fill="#D60000" />
+    <!-- Center V junction -->
+    <path d="M 206 348 L 256 424 L 306 348 L 256 320 Z" fill="#B30000" />
+
+    <!-- Crisp black border/contour framing the M for ultra-high contrast on light/dark backgrounds -->
+    <path d="M 44 140 L 124 140 L 256 348 L 388 140 L 468 140 L 468 472 L 388 472 L 388 228 L 256 436 L 124 228 L 124 472 L 44 472 Z" 
+          fill="none" stroke="#111111" stroke-width="12" stroke-linejoin="miter" stroke-miterlimit="4" />
+
+    <!-- 3. RED PEN NIB IN CENTER (Pena Merah di Tengah) -->
+    <!-- Pen Nib background plate / shadow for separation -->
+    <path d="M 256 160 L 312 256 L 296 390 L 256 448 L 216 390 L 200 256 Z" fill="#111111" />
+    
+    <!-- Pen Nib Body (#D60000) -->
+    <path d="M 256 172 L 304 256 L 288 382 L 256 436 L 224 382 L 208 256 Z" fill="#D60000" />
+    
+    <!-- Pen Nib Left/Right facet shading -->
+    <path d="M 256 172 L 256 436 L 224 382 L 208 256 Z" fill="#E61A1A" />
+    <path d="M 256 172 L 304 256 L 288 382 L 256 436 Z" fill="#B30000" />
+
+    <!-- Breather hole (Circle in center) -->
+    <circle cx="256" cy="280" r="16" fill="#111111" />
+    <circle cx="256" cy="280" r="10" fill="#FFFFFF" />
+
+    <!-- Tine slit line running down to nib tip -->
+    <line x1="256" y1="296" x2="256" y2="436" stroke="#111111" stroke-width="6" stroke-linecap="round" />
+    
+    <!-- Pen Nib metallic highlight arc -->
+    <path d="M 232 230 C 248 220, 264 220, 280 230" fill="none" stroke="#FFFFFF" stroke-width="5" opacity="0.8" stroke-linecap="round" />
+
+  </g>
+</svg>

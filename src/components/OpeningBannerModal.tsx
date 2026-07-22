@@ -229,7 +229,7 @@ export default function OpeningBannerModal({
     if (activeBanner.displayPosition === "fullscreen") {
       return "w-full max-w-4xl max-h-[calc(100vh-100px)] sm:max-h-[92vh] overflow-y-auto";
     }
-    return "w-[92vw] max-w-[390px] sm:max-w-md md:max-w-lg max-h-[calc(100vh-140px)] sm:max-h-[88vh] overflow-y-auto";
+    return "w-[90vw] max-w-xs sm:max-w-md md:max-w-lg max-h-[calc(100vh-120px)] sm:max-h-[88vh] overflow-y-auto";
   };
 
   // Convert hex color + opacity to rgba for overlay
@@ -326,7 +326,7 @@ export default function OpeningBannerModal({
               </div>
 
               {/* Banner Body Content */}
-              <div className="p-4 sm:p-6 space-y-3 sm:space-y-4 text-left flex-1 flex flex-col justify-between overflow-y-auto min-h-0">
+              <div className="p-3.5 sm:p-6 space-y-2.5 sm:space-y-4 text-left flex-1 flex flex-col justify-between overflow-y-auto min-h-0">
                 <div className="space-y-2">
                   {activeBanner.title && (
                     <h3 className="text-base sm:text-xl md:text-2xl font-black tracking-tight text-gray-900 dark:text-white leading-snug line-clamp-3">
