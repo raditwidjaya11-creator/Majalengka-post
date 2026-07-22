@@ -23,6 +23,7 @@ import PrivacyPolicyPage from "./components/PrivacyPolicyPage";
 import { Palette, Sliders, Newspaper, Eye, ShieldAlert, BookOpen, Lock, Unlock, KeyRound, Home, Video, Layers, User, Moon, Sun, Sparkles, Database, CloudLightning, CheckCircle2, AlertTriangle, RefreshCw, Copy, ExternalLink, HelpCircle, BellRing, Tv, Radio, MessageSquare, Play, Pause, Volume2, Maximize, Send, Reply, Heart, Share2, Mail, Check, Share } from "lucide-react";
 import { slugify } from "./utils/slugify";
 import { safeLocalStorage } from "./lib/safeStorage";
+import { getYouTubeEmbedUrl } from "./lib/youtube";
 import { requestNotificationPermission, getNotificationPermissionStatus, showNewArticleNotification } from "./utils/notification";
 import logoImg from "./assets/images/majalengka_post_logo_1783851016975.jpg";
 import { 
@@ -487,7 +488,7 @@ export default function App() {
 
   const socketRef = useRef<WebSocket | null>(null);
 
-  // Establish real-time WebSocket connection to the server on modal open
+  // Establish real-time WebSocket connection (with automatic REST API polling fallback)
   useEffect(() => {
     if (!showLiveStreamModal || !liveStreamActive) {
       if (socketRef.current) {
@@ -497,69 +498,107 @@ export default function App() {
       return;
     }
 
-    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${wsProtocol}//${window.location.host}`;
-    
-    console.log("Connecting to live stream chat WebSocket:", wsUrl);
-    const socket = new WebSocket(wsUrl);
-    socketRef.current = socket;
+    let isWsConnected = false;
+    let pollInterval: NodeJS.Timeout | null = null;
 
-    socket.onopen = () => {
-      console.log("WebSocket connected to live stream chat!");
-    };
-
-    socket.onmessage = (event) => {
+    // Helper for HTTP Polling fallback
+    const pollChatData = async () => {
       try {
-        const data = JSON.parse(event.data);
-        if (data.type === "init") {
-          setLiveStreamChats(data.history || []);
+        const res = await fetch("/api/live-chat");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.history) {
+            setLiveStreamChats(data.history);
+          }
           if (data.viewers) {
             setLiveStreamViewersLocal(data.viewers);
           }
-        } else if (data.type === "viewers") {
-          if (data.viewers) {
-            setLiveStreamViewersLocal(data.viewers);
-          }
-        } else if (data.type === "message" && data.chat) {
-          setLiveStreamChats(prev => {
-            // Guard against duplicate message IDs for idempotency
-            if (prev.some(item => item.id === data.chat.id)) {
-              return prev;
-            }
-            return [...prev, data.chat].slice(-100);
-          });
-        } else if (data.type === "like" && data.msgId) {
-          setLiveStreamChats(prev => prev.map(item => item.id === Number(data.msgId) ? { ...item, likes: (item.likes || 0) + 1 } : item));
-        } else if (data.type === "reaction" && data.emoji) {
-          const newReaction = {
-            id: data.id || Date.now() + Math.random(),
-            emoji: data.emoji,
-            left: Math.floor(Math.random() * 75) + 12, // 12% to 87% left to avoid overlapping edges
-            rotate: Math.floor(Math.random() * 50) - 25, // -25deg to 25deg
-            scale: parseFloat((Math.random() * 0.5 + 0.9).toFixed(2)) // 0.9 to 1.4
-          };
-          setFloatingReactions(prev => [...prev, newReaction].slice(-30));
-          setTimeout(() => {
-            setFloatingReactions(prev => prev.filter(r => r.id !== newReaction.id));
-          }, 2400);
         }
-      } catch (err) {
-        console.error("Error reading WebSocket chat data:", err);
+      } catch {
+        // Safe silence on polling failure
       }
     };
 
-    socket.onclose = () => {
-      console.log("WebSocket connection closed, retrying in 3s...");
-    };
+    // Attempt WebSocket connection safely
+    try {
+      const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+      
+      const socket = new WebSocket(wsUrl);
+      socketRef.current = socket;
 
-    socket.onerror = (err) => {
-      console.error("WebSocket error:", err);
-    };
+      socket.onopen = () => {
+        isWsConnected = true;
+        console.log("WebSocket connected to live stream chat!");
+      };
+
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "init") {
+            setLiveStreamChats(data.history || []);
+            if (data.viewers) {
+              setLiveStreamViewersLocal(data.viewers);
+            }
+          } else if (data.type === "viewers") {
+            if (data.viewers) {
+              setLiveStreamViewersLocal(data.viewers);
+            }
+          } else if (data.type === "message" && data.chat) {
+            setLiveStreamChats(prev => {
+              if (prev.some(item => item.id === data.chat.id)) {
+                return prev;
+              }
+              return [...prev, data.chat].slice(-100);
+            });
+          } else if (data.type === "like" && data.msgId) {
+            setLiveStreamChats(prev => prev.map(item => item.id === Number(data.msgId) ? { ...item, likes: (item.likes || 0) + 1 } : item));
+          } else if (data.type === "reaction" && data.emoji) {
+            const newReaction = {
+              id: data.id || Date.now() + Math.random(),
+              emoji: data.emoji,
+              left: Math.floor(Math.random() * 75) + 12,
+              rotate: Math.floor(Math.random() * 50) - 25,
+              scale: parseFloat((Math.random() * 0.5 + 0.9).toFixed(2))
+            };
+            setFloatingReactions(prev => [...prev, newReaction].slice(-30));
+            setTimeout(() => {
+              setFloatingReactions(prev => prev.filter(r => r.id !== newReaction.id));
+            }, 2400);
+          }
+        } catch {
+          // Ignore JSON parse errors
+        }
+      };
+
+      socket.onclose = () => {
+        isWsConnected = false;
+        if (!pollInterval) {
+          pollChatData();
+          pollInterval = setInterval(pollChatData, 3000);
+        }
+      };
+
+      socket.onerror = () => {
+        isWsConnected = false;
+        if (!pollInterval) {
+          pollChatData();
+          pollInterval = setInterval(pollChatData, 3000);
+        }
+      };
+    } catch {
+      // If WebSocket constructor throws, start polling fallback
+      pollChatData();
+      pollInterval = setInterval(pollChatData, 3000);
+    }
 
     return () => {
       if (socketRef.current) {
         socketRef.current.close();
         socketRef.current = null;
+      }
+      if (pollInterval) {
+        clearInterval(pollInterval);
       }
     };
   }, [showLiveStreamModal, liveStreamActive]);
@@ -571,7 +610,12 @@ export default function App() {
         emoji: emoji
       }));
     } else {
-      // Offline local preview fallback
+      fetch("/api/live-chat/reaction", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emoji })
+      }).catch(() => {});
+
       const newReaction = {
         id: Date.now() + Math.random(),
         emoji: emoji,
@@ -2115,14 +2159,7 @@ export default function App() {
                   <div ref={playerContainerRef} className="relative aspect-video w-full bg-black rounded-2xl overflow-hidden border border-slate-800 shadow-lg group">
                     {liveStreamType === "youtube" ? (
                       <iframe
-                        src={liveStreamUrl.includes("embed") ? `${liveStreamUrl}${liveStreamUrl.includes("?") ? "&" : "?"}autoplay=1&mute=1` : (() => {
-                          const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-                          const match = liveStreamUrl.match(regExp);
-                          if (match && match[2].length === 11) {
-                            return `https://www.youtube.com/embed/${match[2]}?autoplay=1&mute=1`;
-                          }
-                          return liveStreamUrl;
-                        })()}
+                        src={getYouTubeEmbedUrl(liveStreamUrl, true)}
                         title={liveStreamTitle}
                         className="w-full h-full border-0 absolute inset-0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -2597,13 +2634,22 @@ export default function App() {
 
                               <button
                                 type="button"
-                                onClick={() => {
+                                onClick={async () => {
                                   if (likedMsgIds.includes(msg.id)) return;
                                   setLikedMsgIds(prev => [...prev, msg.id]);
                                   if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
                                     socketRef.current.send(JSON.stringify({ type: "like", msgId: msg.id }));
                                   } else {
                                     setLiveStreamChats(prev => prev.map(item => item.id === msg.id ? { ...item, likes: (item.likes || 0) + 1 } : item));
+                                    try {
+                                      await fetch("/api/live-chat/like", {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ msgId: msg.id })
+                                      });
+                                    } catch {
+                                      // Silence error
+                                    }
                                   }
                                 }}
                                 className={`font-bold flex items-center gap-1 px-1.5 py-0.5 rounded transition-all ${isLiked ? "text-red-400 bg-red-950/40" : "text-slate-500 hover:text-red-400"}`}
@@ -2702,25 +2748,67 @@ export default function App() {
 
                   {/* Input form */}
                   <form
-                    onSubmit={(e) => {
+                    onSubmit={async (e) => {
                       e.preventDefault();
                       if (!newLiveStreamChat.trim()) return;
                       
+                      const chatPayload = {
+                        name: chatUsername,
+                        text: newLiveStreamChat,
+                        replyTo: replyingToMsg ? {
+                          id: replyingToMsg.id,
+                          name: replyingToMsg.name,
+                          text: replyingToMsg.text
+                        } : undefined
+                      };
+
                       if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
                         socketRef.current.send(JSON.stringify({
                           type: "message",
-                          name: chatUsername,
-                          text: newLiveStreamChat,
-                          replyTo: replyingToMsg ? {
-                            id: replyingToMsg.id,
-                            name: replyingToMsg.name,
-                            text: replyingToMsg.text
-                          } : undefined
+                          ...chatPayload
                         }));
                         setNewLiveStreamChat("");
                         setReplyingToMsg(null);
                       } else {
-                        alert("Koneksi obrolan terputus. Silakan coba sesaat lagi.");
+                        // REST fallback when WS is closed or unavailable
+                        try {
+                          const res = await fetch("/api/live-chat/message", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(chatPayload)
+                          });
+                          if (res.ok) {
+                            const data = await res.json();
+                            if (data.chat) {
+                              setLiveStreamChats(prev => [...prev, data.chat].slice(-100));
+                            }
+                          } else {
+                            // Local optimistic fallback
+                            const timeNow = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+                            const localChat = {
+                              id: Date.now(),
+                              name: chatUsername,
+                              text: newLiveStreamChat,
+                              time: timeNow,
+                              likes: 0,
+                              replyTo: chatPayload.replyTo
+                            };
+                            setLiveStreamChats(prev => [...prev, localChat].slice(-100));
+                          }
+                        } catch {
+                          const timeNow = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+                          const localChat = {
+                            id: Date.now(),
+                            name: chatUsername,
+                            text: newLiveStreamChat,
+                            time: timeNow,
+                            likes: 0,
+                            replyTo: chatPayload.replyTo
+                          };
+                          setLiveStreamChats(prev => [...prev, localChat].slice(-100));
+                        }
+                        setNewLiveStreamChat("");
+                        setReplyingToMsg(null);
                       }
                     }}
                     className="border-t border-slate-800 pt-2.5 mt-2 flex gap-2"

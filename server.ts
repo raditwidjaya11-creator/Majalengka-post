@@ -807,6 +807,72 @@ async function startServer() {
     next();
   });
 
+  // Manage live chat messages in memory for both WebSocket and HTTP REST polling fallback
+  const globalChatHistory: Array<{
+    id: number;
+    name: string;
+    text: string;
+    time: string;
+    likes?: number;
+    replyTo?: { id: number; name: string; text: string };
+  }> = [
+    { id: 1, name: "Ahmad_Majalengka", text: "Selamat pagi Majalengka Post! Terus suarakan berita kredibel.", time: "09:00", likes: 3 },
+    { id: 2, name: "Siti_Jatiwangi", text: "Kondisi cuaca di Jatiwangi hari ini sangat cerah, salam hangat.", time: "09:01", likes: 1 },
+    { id: 3, name: "Budi_Kadipaten", text: "Kabar Tol Cipali seksi Kertajati bagaimana ya?", time: "09:02", likes: 0 },
+    { id: 4, name: "Rina_Talaga", text: "Menunggu liputan langsung dari lokasi bencana.", time: "09:03", likes: 2, replyTo: { id: 3, name: "Budi_Kadipaten", text: "Kabar Tol Cipali seksi Kertajati bagaimana ya?" } }
+  ];
+
+  let activeViewersCount = 1340;
+
+  // GET Live Chat History & Viewers (HTTP REST Polling fallback)
+  app.get("/api/live-chat", (req, res) => {
+    return res.json({
+      success: true,
+      history: globalChatHistory,
+      viewers: activeViewersCount
+    });
+  });
+
+  // POST New Live Chat Message (HTTP REST)
+  app.post("/api/live-chat/message", (req, res) => {
+    const { name, text, replyTo } = req.body || {};
+    if (!text) {
+      return res.status(400).json({ success: false, error: "Teks pesan diperlukan" });
+    }
+
+    const timeNow = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+    const newChat = {
+      id: Date.now(),
+      name: (name || "Anonim").trim().substring(0, 30),
+      text: String(text).trim().substring(0, 500),
+      time: timeNow,
+      likes: 0,
+      replyTo: replyTo ? {
+        id: Number(replyTo.id),
+        name: String(replyTo.name).trim().substring(0, 30),
+        text: String(replyTo.text).trim().substring(0, 150)
+      } : undefined
+    };
+
+    globalChatHistory.push(newChat);
+    if (globalChatHistory.length > 100) {
+      globalChatHistory.shift();
+    }
+
+    return res.json({ success: true, chat: newChat });
+  });
+
+  // POST Like Live Chat Message (HTTP REST)
+  app.post("/api/live-chat/like", (req, res) => {
+    const { msgId } = req.body || {};
+    const target = globalChatHistory.find(c => c.id === Number(msgId));
+    if (target) {
+      target.likes = (target.likes || 0) + 1;
+      return res.json({ success: true, msgId: target.id, likes: target.likes });
+    }
+    return res.status(404).json({ success: false, error: "Pesan tidak ditemukan" });
+  });
+
   // Setup Hot Module Replacement/Middleware or Production static serving
   if (process.env.NODE_ENV !== "production") {
     vite = await createViteServer({
@@ -830,32 +896,18 @@ async function startServer() {
     // Setup WebSocket Server for real-time live chat
     const wss = new WebSocketServer({ noServer: true });
 
-    // Manage chat messages in memory
-    const chatHistory: Array<{
-      id: number;
-      name: string;
-      text: string;
-      time: string;
-      likes?: number;
-      replyTo?: { id: number; name: string; text: string };
-    }> = [
-      { id: 1, name: "Ahmad_Majalengka", text: "Selamat pagi Majalengka Post! Terus suarakan berita kredibel.", time: "09:00", likes: 3 },
-      { id: 2, name: "Siti_Jatiwangi", text: "Kondisi cuaca di Jatiwangi hari ini sangat cerah, salam hangat.", time: "09:01", likes: 1 },
-      { id: 3, name: "Budi_Kadipaten", text: "Kabar Tol Cipali seksi Kertajati bagaimana ya?", time: "09:02", likes: 0 },
-      { id: 4, name: "Rina_Talaga", text: "Menunggu liputan langsung dari lokasi bencana.", time: "09:03", likes: 2, replyTo: { id: 3, name: "Budi_Kadipaten", text: "Kabar Tol Cipali seksi Kertajati bagaimana ya?" } }
-    ];
-
     // Track active connection count
-    let activeViewers = 0;
+    let activeWSConnections = 0;
 
     wss.on("connection", (ws) => {
-      activeViewers++;
+      activeWSConnections++;
+      activeViewersCount = 1340 + activeWSConnections;
 
       // Send initial history and viewer counts to client
-      ws.send(JSON.stringify({ type: "init", history: chatHistory, viewers: activeViewers }));
+      ws.send(JSON.stringify({ type: "init", history: globalChatHistory, viewers: activeViewersCount }));
 
       // Broadcast updated viewers to all clients
-      broadcast({ type: "viewers", viewers: activeViewers });
+      broadcast({ type: "viewers", viewers: activeViewersCount });
 
       ws.on("message", (messageData) => {
         try {
@@ -875,14 +927,14 @@ async function startServer() {
               } : undefined
             };
 
-            chatHistory.push(newChat);
-            if (chatHistory.length > 100) {
-              chatHistory.shift();
+            globalChatHistory.push(newChat);
+            if (globalChatHistory.length > 100) {
+              globalChatHistory.shift();
             }
 
             broadcast({ type: "message", chat: newChat });
           } else if (parsed.type === "like" && parsed.msgId) {
-            const target = chatHistory.find(c => c.id === Number(parsed.msgId));
+            const target = globalChatHistory.find(c => c.id === Number(parsed.msgId));
             if (target) {
               target.likes = (target.likes || 0) + 1;
               broadcast({ type: "like", msgId: target.id, likes: target.likes });
@@ -896,8 +948,9 @@ async function startServer() {
       });
 
       ws.on("close", () => {
-        activeViewers = Math.max(0, activeViewers - 1);
-        broadcast({ type: "viewers", viewers: activeViewers });
+        activeWSConnections = Math.max(0, activeWSConnections - 1);
+        activeViewersCount = 1340 + activeWSConnections;
+        broadcast({ type: "viewers", viewers: activeViewersCount });
       });
     });
 
@@ -911,9 +964,14 @@ async function startServer() {
     }
 
     server.on("upgrade", (request, socket, head) => {
-      wss.handleUpgrade(request, socket, head, (ws) => {
-        wss.emit("connection", ws, request);
-      });
+      const upgradeHeader = request.headers.upgrade ? String(request.headers.upgrade).toLowerCase() : "";
+      if (upgradeHeader === "websocket") {
+        wss.handleUpgrade(request, socket, head, (ws) => {
+          wss.emit("connection", ws, request);
+        });
+      } else {
+        socket.destroy();
+      }
     });
 
     server.listen(PORT, "0.0.0.0", () => {

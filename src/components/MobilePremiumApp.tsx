@@ -13,6 +13,7 @@ import { Article, AdBanner, OpeningBanner, Poll, ValasRate, Comment, MediaItem, 
 import { CATEGORIES, SHOLAT_SCHEDULE, CURRENCY_RATES, STOCK_MARKET, INITIAL_COMMENTS } from "../mockData";
 import { slugify } from "../utils/slugify";
 import logoImg from "../assets/images/majalengka_post_logo_1783851016975.jpg";
+import { getYouTubeEmbedUrl } from "../lib/youtube";
 import Footer from "./Footer";
 import OpeningBannerModal from "./OpeningBannerModal";
 
@@ -2259,14 +2260,7 @@ export default function MobilePremiumApp({
                     {liveStreamActive ? (
                       liveStreamType === "youtube" ? (
                         <iframe
-                          src={liveStreamUrl.includes("embed") ? `${liveStreamUrl}${liveStreamUrl.includes("?") ? "&" : "?"}autoplay=1&mute=${isLiveMuted ? 1 : 0}` : (() => {
-                            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-                            const match = liveStreamUrl.match(regExp);
-                            if (match && match[2].length === 11) {
-                              return `https://www.youtube.com/embed/${match[2]}?autoplay=1&mute=${isLiveMuted ? 1 : 0}&enablejsapi=1`;
-                            }
-                            return liveStreamUrl;
-                          })()}
+                          src={getYouTubeEmbedUrl(liveStreamUrl, isLiveMuted)}
                           title={liveStreamTitle || "Majalengka Post TV Live"}
                           className="w-full h-full border-0 absolute inset-0"
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"

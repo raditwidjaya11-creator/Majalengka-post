@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Article, Comment, AdBanner, Poll, ValasRate } from "../types";
 import { CATEGORIES, SHOLAT_SCHEDULE, CURRENCY_RATES, STOCK_MARKET, INITIAL_COMMENTS } from "../mockData";
 import { slugify } from "../utils/slugify";
+import { getYouTubeEmbedUrl } from "../lib/youtube";
 
 interface PublicPortalProps {
   articles: Article[];
@@ -889,7 +890,7 @@ export default function PublicPortal({
                 <h4 className="text-sm font-bold uppercase text-gray-500 tracking-wider mb-3">Liputan Video Terkait</h4>
                 <div className="aspect-video w-full rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800">
                   <iframe
-                    src={selectedArticle.videoUrl}
+                    src={getYouTubeEmbedUrl(selectedArticle.videoUrl, false)}
                     title="YouTube video player"
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
