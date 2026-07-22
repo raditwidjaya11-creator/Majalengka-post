@@ -55,6 +55,72 @@ interface MobilePremiumAppProps {
   activeCameraFrame?: string;
 }
 
+/* Heart Burst Animation Component for Comment Likes */
+const HeartBurstEffect: React.FC<{ active?: boolean }> = ({ active = true }) => {
+  if (!active) return null;
+
+  const particles = [
+    { angle: 0, distance: 30, color: "text-red-500" },
+    { angle: 45, distance: 26, color: "text-rose-500" },
+    { angle: 90, distance: 34, color: "text-pink-500" },
+    { angle: 135, distance: 26, color: "text-red-500" },
+    { angle: 180, distance: 30, color: "text-rose-400" },
+    { angle: 225, distance: 26, color: "text-pink-400" },
+    { angle: 270, distance: 34, color: "text-red-600" },
+    { angle: 315, distance: 26, color: "text-rose-500" },
+  ];
+
+  return (
+    <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-30 overflow-visible">
+      {/* Central Heart Pulse & Flash */}
+      <motion.div
+        initial={{ scale: 0.2, opacity: 1, rotate: -15 }}
+        animate={{ scale: [0.2, 1.9, 2.3], opacity: [1, 0.95, 0], rotate: [-15, 10, 0] }}
+        transition={{ duration: 0.65, ease: "easeOut" }}
+        className="absolute text-red-500 filter drop-shadow-[0_0_10px_rgba(239,68,68,0.85)]"
+      >
+        <Heart className="w-5 h-5 fill-red-500" />
+      </motion.div>
+
+      {/* Radial Burst Mini Hearts */}
+      {particles.map((p, i) => {
+        const rad = (p.angle * Math.PI) / 180;
+        const x = Math.cos(rad) * p.distance;
+        const y = Math.sin(rad) * p.distance;
+
+        return (
+          <motion.div
+            key={i}
+            initial={{ x: 0, y: 0, scale: 0.2, opacity: 1 }}
+            animate={{
+              x,
+              y,
+              scale: [0.2, 1.2, 0],
+              opacity: [1, 0.9, 0],
+              rotate: [0, p.angle]
+            }}
+            transition={{ duration: 0.75, ease: [0.175, 0.885, 0.32, 1.275], delay: i * 0.02 }}
+            className={`absolute ${p.color} filter drop-shadow-sm`}
+          >
+            <Heart className="w-3 h-3 fill-current" />
+          </motion.div>
+        );
+      })}
+
+      {/* Upward Floating "+1 ❤️" Pill */}
+      <motion.div
+        initial={{ y: 0, opacity: 0, scale: 0.5 }}
+        animate={{ y: -34, opacity: [0, 1, 1, 0], scale: [0.5, 1.15, 1, 0.85] }}
+        transition={{ duration: 0.9, ease: "easeOut" }}
+        className="absolute -top-3 font-black text-[10px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-slate-900 border border-red-300 dark:border-red-800/80 px-2 py-0.5 rounded-full shadow-lg flex items-center gap-1 whitespace-nowrap"
+      >
+        <span>+1</span>
+        <Heart className="w-2.5 h-2.5 fill-red-500 text-red-500 inline" />
+      </motion.div>
+    </div>
+  );
+};
+
 export default function MobilePremiumApp({
   articles,
   banners,
@@ -176,11 +242,28 @@ export default function MobilePremiumApp({
   const [replyText, setReplyText] = useState<string>("");
   const [collapsedThreads, setCollapsedThreads] = useState<Record<string, boolean>>({});
 
+  // Heart burst & liked state for comments
+  const [likedCommentIds, setLikedCommentIds] = useState<string[]>([]);
+  const [heartBursts, setHeartBursts] = useState<Array<{ id: string; commentId: string }>>([]);
+
   const toggleThreadCollapse = (commentId: string) => {
     setCollapsedThreads(prev => ({ ...prev, [commentId]: !prev[commentId] }));
   };
 
   const handleLikeComment = (commentId: string) => {
+    // Track liked comment IDs
+    if (!likedCommentIds.includes(commentId)) {
+      setLikedCommentIds(prev => [...prev, commentId]);
+    }
+
+    // Trigger heart burst animation instance
+    const burstId = `${commentId}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    setHeartBursts(prev => [...prev, { id: burstId, commentId }]);
+
+    setTimeout(() => {
+      setHeartBursts(prev => prev.filter(b => b.id !== burstId));
+    }, 1200);
+
     setArticleComments(prev => {
       let updatedPrev = [...prev];
       const exists = prev.some(c => c.id === commentId || (c.replies && c.replies.some(r => r.id === commentId)));
@@ -1624,14 +1707,24 @@ export default function MobilePremiumApp({
                                   </div>
                                 </div>
                                 <motion.button 
-                                  whileHover={{ scale: 1.05 }}
-                                  whileTap={{ scale: 0.85 }}
+                                  whileHover={{ scale: 1.08 }}
+                                  whileTap={{ scale: 0.8 }}
                                   transition={{ type: "spring", stiffness: 400, damping: 15 }}
                                   onClick={() => handleLikeComment(comment.id)}
-                                  className="flex items-center gap-1 text-[10px] font-bold text-slate-500 dark:text-slate-400 hover:text-red-500 transition-colors bg-slate-50 dark:bg-slate-950 px-2 py-0.5 rounded-lg border border-slate-200/60 dark:border-slate-800"
+                                  className={`relative flex items-center gap-1 text-[10px] font-bold transition-all px-2 py-0.5 rounded-lg border ${
+                                    likedCommentIds.includes(comment.id)
+                                      ? "text-red-500 bg-red-50 dark:bg-red-950/50 border-red-200 dark:border-red-900/60 shadow-sm"
+                                      : "text-slate-500 dark:text-slate-400 hover:text-red-500 bg-slate-50 dark:bg-slate-950 border-slate-200/60 dark:border-slate-800"
+                                  }`}
                                 >
-                                  <ThumbsUp className="w-2.5 h-2.5" />
+                                  <Heart className={`w-2.5 h-2.5 transition-transform duration-200 ${likedCommentIds.includes(comment.id) ? "fill-red-500 text-red-500 scale-110" : "text-slate-400"}`} />
                                   <span>{comment.likes}</span>
+
+                                  <AnimatePresence>
+                                    {heartBursts.filter(b => b.commentId === comment.id).map(burst => (
+                                      <HeartBurstEffect key={burst.id} active={true} />
+                                    ))}
+                                  </AnimatePresence>
                                 </motion.button>
                               </div>
 
@@ -1752,13 +1845,26 @@ export default function MobilePremiumApp({
                                             </div>
                                           </div>
 
-                                          <button
+                                          <motion.button
+                                            whileHover={{ scale: 1.08 }}
+                                            whileTap={{ scale: 0.8 }}
+                                            transition={{ type: "spring", stiffness: 400, damping: 15 }}
                                             onClick={() => handleLikeComment(reply.id)}
-                                            className="flex items-center gap-0.5 text-[9px] font-bold text-slate-500 dark:text-slate-400 hover:text-red-500 bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-800"
+                                            className={`relative flex items-center gap-0.5 text-[9px] font-bold transition-all px-1.5 py-0.5 rounded border ${
+                                              likedCommentIds.includes(reply.id)
+                                                ? "text-red-500 bg-red-50 dark:bg-red-950/50 border-red-200 dark:border-red-900/60 shadow-sm"
+                                                : "text-slate-500 dark:text-slate-400 hover:text-red-500 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                                            }`}
                                           >
-                                            <ThumbsUp className="w-2 h-2" />
+                                            <Heart className={`w-2 h-2 transition-transform duration-200 ${likedCommentIds.includes(reply.id) ? "fill-red-500 text-red-500 scale-110" : "text-slate-400"}`} />
                                             <span>{reply.likes}</span>
-                                          </button>
+
+                                            <AnimatePresence>
+                                              {heartBursts.filter(b => b.commentId === reply.id).map(burst => (
+                                                <HeartBurstEffect key={burst.id} active={true} />
+                                              ))}
+                                            </AnimatePresence>
+                                          </motion.button>
                                         </div>
 
                                         {/* Reply Content */}
