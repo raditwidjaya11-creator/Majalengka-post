@@ -1716,6 +1716,7 @@ export default function App() {
           <MobilePremiumApp
             articles={articles}
             banners={banners}
+            openingBanners={openingBanners}
             valasRates={valasRates}
             currentCategory={currentCategory}
             onSelectCategory={setCurrentCategory}
@@ -1801,6 +1802,12 @@ export default function App() {
             </div>
           </div>
         )}
+
+        {/* Opening Banner Modal for Mobile Viewport */}
+        <OpeningBannerModal
+          banners={openingBanners}
+          currentPage={currentPath || (selectedArticle ? "article" : "home")}
+        />
       </div>
     );
   }

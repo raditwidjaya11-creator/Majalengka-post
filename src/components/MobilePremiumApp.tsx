@@ -8,15 +8,17 @@ import {
   ArrowUpRight, Moon, Sun, Lock
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { Article, AdBanner, Poll, ValasRate, Comment, MediaItem, InternalNotification } from "../types";
+import { Article, AdBanner, OpeningBanner, Poll, ValasRate, Comment, MediaItem, InternalNotification } from "../types";
 import { CATEGORIES, SHOLAT_SCHEDULE, CURRENCY_RATES, STOCK_MARKET, INITIAL_COMMENTS } from "../mockData";
 import { slugify } from "../utils/slugify";
 import logoImg from "../assets/images/majalengka_post_logo_1783851016975.jpg";
 import Footer from "./Footer";
+import OpeningBannerModal from "./OpeningBannerModal";
 
 interface MobilePremiumAppProps {
   articles: Article[];
   banners: AdBanner[];
+  openingBanners?: OpeningBanner[];
   valasRates: ValasRate[];
   currentCategory: string;
   onSelectCategory: (category: string) => void;
@@ -54,6 +56,7 @@ interface MobilePremiumAppProps {
 export default function MobilePremiumApp({
   articles,
   banners,
+  openingBanners = [],
   valasRates,
   currentCategory,
   onSelectCategory,
@@ -903,7 +906,7 @@ export default function MobilePremiumApp({
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className={`min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-24 font-sans select-none overflow-x-hidden ${fontFamily}`}
+      className={`min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-[calc(6rem+env(safe-area-inset-bottom,0px))] font-sans select-none overflow-x-hidden ${fontFamily}`}
     >
       
       {/* ================= 1. SPLASH SCREEN ================= */}
@@ -2190,7 +2193,7 @@ export default function MobilePremiumApp({
       </AnimatePresence>
 
       {/* ================= 3. BOTTOM NAVIGATION (MOBILE PORTAL) ================= */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-slate-950/90 border-t border-slate-100 dark:border-slate-900 z-40 pb-4 shadow-[0_-8px_24px_rgba(0,0,0,0.06)] backdrop-blur-lg">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-slate-950/90 border-t border-slate-100 dark:border-slate-900 z-40 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] shadow-[0_-8px_24px_rgba(0,0,0,0.06)] backdrop-blur-lg">
         <div className="max-w-md mx-auto px-4 py-2 flex items-center justify-between">
           
           {/* Tab Beranda */}
@@ -2903,6 +2906,12 @@ export default function MobilePremiumApp({
           </>
         )}
       </AnimatePresence>
+
+      {/* Opening Banner Modal for Mobile View */}
+      <OpeningBannerModal
+        banners={openingBanners}
+        currentPage={selectedArticle ? "article" : activeTab}
+      />
     </div>
   );
 }
