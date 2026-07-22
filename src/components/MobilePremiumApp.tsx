@@ -5,7 +5,7 @@ import {
   Volume2, Plus, CheckCircle2, RefreshCw, Layers, Calendar, Clock, Eye, 
   ThumbsUp, BookOpen, MessageSquare, ZoomIn, ZoomOut, Phone, MapPin, 
   Info, Camera, FileText, Globe, Radio, Settings, ShieldAlert, Database,
-  ArrowUpRight, Moon, Sun, Lock
+  ArrowUpRight, Moon, Sun, Lock, Reply, CornerDownRight, ChevronDown, ChevronUp, X
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Article, AdBanner, OpeningBanner, Poll, ValasRate, Comment, MediaItem, InternalNotification } from "../types";
@@ -166,6 +166,18 @@ export default function MobilePremiumApp({
   const [newCommentName, setNewCommentName] = useState("");
   const [newCommentText, setNewCommentText] = useState("");
 
+  // Nested Reply states
+  const [activeReplyId, setActiveReplyId] = useState<string | null>(null); // target comment/reply ID
+  const [activeReplyParentId, setActiveReplyParentId] = useState<string | null>(null); // parent top-level comment ID
+  const [activeReplyTargetUser, setActiveReplyTargetUser] = useState<string>("");
+  const [replyUserName, setReplyUserName] = useState<string>("");
+  const [replyText, setReplyText] = useState<string>("");
+  const [collapsedThreads, setCollapsedThreads] = useState<Record<string, boolean>>({});
+
+  const toggleThreadCollapse = (commentId: string) => {
+    setCollapsedThreads(prev => ({ ...prev, [commentId]: !prev[commentId] }));
+  };
+
   const handleLikeComment = (commentId: string) => {
     setArticleComments(prev => {
       let updatedPrev = [...prev];
@@ -244,6 +256,80 @@ export default function MobilePremiumApp({
 
     setNewCommentName("");
     setNewCommentText("");
+  };
+
+  const handleAddReply = (parentCommentId: string, targetUser: string) => {
+    const nameToUse = replyUserName.trim() || newCommentName.trim() || "Pembaca";
+    if (!replyText.trim() || !selectedArticle) return;
+
+    const newReplyItem: Comment = {
+      id: `reply-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      articleId: selectedArticle.id,
+      user: nameToUse,
+      avatar: `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(nameToUse)}`,
+      content: targetUser && targetUser !== nameToUse ? `@${targetUser} ${replyText.trim()}` : replyText.trim(),
+      timestamp: new Date().toISOString(),
+      likes: 0,
+      reported: false,
+      isModerated: true,
+      replies: []
+    };
+
+    setArticleComments(prev => {
+      let updatedPrev = [...prev];
+      const parentExists = updatedPrev.some(c => c.id === parentCommentId);
+
+      if (!parentExists && parentCommentId.startsWith("fallback-")) {
+        const match = parentCommentId.match(/^fallback-(\d+)-(.*)$/);
+        if (match) {
+          const index = match[1];
+          const articleId = match[2];
+          const fallbackComment: Comment = {
+            id: parentCommentId,
+            articleId: articleId,
+            user: index === "1" ? "Agus Salim" : "Indah Wahyuni",
+            avatar: index === "1" ? "https://api.dicebear.com/7.x/adventurer/svg?seed=Agus" : "https://api.dicebear.com/7.x/adventurer/svg?seed=Indah",
+            content: index === "1" 
+              ? "Berita yang sangat mencerdaskan. Semoga bisa segera direalisasikan demi kelancaran Majalengka." 
+              : "Sangat bangga karya anak bangsa diakui dunia luar!",
+            timestamp: new Date(Date.now() - (index === "1" ? 2 : 3) * 60 * 60 * 1000).toISOString(),
+            likes: index === "1" ? 12 : 24,
+            reported: false,
+            isModerated: true,
+            replies: []
+          };
+          updatedPrev.push(fallbackComment);
+        }
+      }
+
+      const updated = updatedPrev.map(c => {
+        if (c.id === parentCommentId) {
+          return {
+            ...c,
+            replies: [...(c.replies || []), newReplyItem]
+          };
+        }
+        return c;
+      });
+
+      try {
+        localStorage.setItem("majalengka_comments_v1", JSON.stringify(updated));
+      } catch (err) {
+        console.warn("Failed to persist comments state", err);
+      }
+      return updated;
+    });
+
+    if (replyUserName.trim()) {
+      setNewCommentName(replyUserName.trim());
+    }
+
+    setActiveReplyId(null);
+    setActiveReplyParentId(null);
+    setActiveReplyTargetUser("");
+    setReplyText("");
+
+    setCollapsedThreads(prev => ({ ...prev, [parentCommentId]: false }));
   };
 
   const formatCommentTime = (timestampStr: string) => {
@@ -1435,7 +1521,7 @@ export default function MobilePremiumApp({
               </div>
 
               <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-2xl p-4">
-                <div className="space-y-4 max-h-60 overflow-y-auto mb-4 pr-1">
+                <div className="space-y-4 max-h-[420px] overflow-y-auto mb-4 pr-1 scrollbar-thin">
                   {(() => {
                     const currentArticleComments = articleComments.filter(
                       c => String(c.articleId) === String(selectedArticle.id)
@@ -1452,7 +1538,20 @@ export default function MobilePremiumApp({
                         likes: 12,
                         reported: false,
                         isModerated: true,
-                        replies: []
+                        replies: [
+                          {
+                            id: `fallback-1-r1-${selectedArticle.id}`,
+                            articleId: selectedArticle.id,
+                            user: "Redaksi Majalengka Post",
+                            avatar: "https://api.dicebear.com/7.x/adventurer/svg?seed=Redaksi",
+                            content: "Terima kasih Pak Agus. Kami akan terus mengawal perkembangan program ini secara transparan.",
+                            timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+                            likes: 8,
+                            reported: false,
+                            isModerated: true,
+                            replies: []
+                          }
+                        ]
                       },
                       {
                         id: `fallback-2-${selectedArticle.id}`,
@@ -1485,45 +1584,261 @@ export default function MobilePremiumApp({
 
                     return (
                       <AnimatePresence initial={false}>
-                        {sorted.map((comment) => (
-                          <motion.div
-                            key={comment.id}
-                            initial={{ opacity: 0, y: -12 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -12 }}
-                            transition={{ duration: 0.25, ease: "easeOut" }}
-                            layout
-                            className="text-xs pb-3 border-b border-slate-50 dark:border-slate-850/50 last:border-0 last:pb-0"
-                          >
-                            <div className="flex justify-between items-start">
-                              <div className="flex items-center gap-2">
-                                <img src={comment.avatar} alt={comment.user} className="w-6 h-6 rounded-full bg-slate-100" />
-                                <div>
-                                  <span className="font-extrabold text-slate-800 dark:text-slate-200">{comment.user}</span>
-                                  <span className="text-[10px] text-slate-400 mx-1.5">• {formatCommentTime(comment.timestamp)}</span>
+                        {sorted.map((comment) => {
+                          const hasReplies = comment.replies && comment.replies.length > 0;
+                          const isCollapsed = collapsedThreads[comment.id] || false;
+                          const isReplyingToThisComment = activeReplyId === comment.id;
+
+                          return (
+                            <motion.div
+                              key={comment.id}
+                              initial={{ opacity: 0, y: -12 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -12 }}
+                              transition={{ duration: 0.25, ease: "easeOut" }}
+                              layout
+                              className="text-xs pb-3.5 border-b border-slate-100 dark:border-slate-850/60 last:border-0 last:pb-0"
+                            >
+                              {/* Parent Comment Header */}
+                              <div className="flex justify-between items-start">
+                                <div className="flex items-center gap-2">
+                                  <img src={comment.avatar} alt={comment.user} className="w-6 h-6 rounded-full bg-slate-100 border border-slate-200 dark:border-slate-800" />
+                                  <div>
+                                    <span className="font-extrabold text-slate-800 dark:text-slate-200">{comment.user}</span>
+                                    <span className="text-[10px] text-slate-400 mx-1.5">• {formatCommentTime(comment.timestamp)}</span>
+                                  </div>
                                 </div>
-                              </div>
-                              <motion.button 
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.85 }}
-                                transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                                onClick={() => handleLikeComment(comment.id)}
-                                className="flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-red-500 transition-colors bg-slate-50 dark:bg-slate-950 px-2 py-0.5 rounded-lg border border-slate-100 dark:border-slate-850"
-                              >
-                                <motion.span
-                                  className="inline-block"
-                                  animate={{ scale: [1, 1.4, 1] }}
-                                  transition={{ duration: 0.3, ease: "easeInOut" }}
-                                  key={comment.likes}
+                                <motion.button 
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.85 }}
+                                  transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                                  onClick={() => handleLikeComment(comment.id)}
+                                  className="flex items-center gap-1 text-[10px] font-bold text-slate-500 dark:text-slate-400 hover:text-red-500 transition-colors bg-slate-50 dark:bg-slate-950 px-2 py-0.5 rounded-lg border border-slate-200/60 dark:border-slate-800"
                                 >
                                   <ThumbsUp className="w-2.5 h-2.5" />
-                                </motion.span>
-                                <span>{comment.likes}</span>
-                              </motion.button>
-                            </div>
-                            <p className="text-slate-600 dark:text-slate-400 mt-1.5 ml-8 leading-relaxed">{comment.content}</p>
-                          </motion.div>
-                        ))}
+                                  <span>{comment.likes}</span>
+                                </motion.button>
+                              </div>
+
+                              {/* Comment Content */}
+                              <p className="text-slate-700 dark:text-slate-300 mt-1.5 ml-8 leading-relaxed font-normal">{comment.content}</p>
+
+                              {/* Action Bar: Reply button & Reply thread toggle */}
+                              <div className="flex items-center gap-3 ml-8 mt-2 text-[10px]">
+                                <button
+                                  onClick={() => {
+                                    if (activeReplyId === comment.id) {
+                                      setActiveReplyId(null);
+                                      setActiveReplyParentId(null);
+                                      setActiveReplyTargetUser("");
+                                    } else {
+                                      setActiveReplyId(comment.id);
+                                      setActiveReplyParentId(comment.id);
+                                      setActiveReplyTargetUser(comment.user);
+                                      setReplyUserName(newCommentName || "");
+                                    }
+                                  }}
+                                  className="font-bold text-[#E60023] dark:text-red-400 hover:underline flex items-center gap-1 uppercase tracking-wider"
+                                >
+                                  <Reply className="w-3 h-3" />
+                                  {isReplyingToThisComment ? "Batal Balas" : "Balas"}
+                                </button>
+
+                                {hasReplies && (
+                                  <button
+                                    onClick={() => toggleThreadCollapse(comment.id)}
+                                    className="font-extrabold text-slate-600 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 px-2 py-0.5 rounded-full text-[9.5px] transition-colors border border-slate-200/50 dark:border-slate-700/50"
+                                  >
+                                    <CornerDownRight className="w-2.5 h-2.5 text-[#E60023]" />
+                                    <span>{comment.replies.length} Balasan</span>
+                                    {isCollapsed ? <ChevronDown className="w-2.5 h-2.5 ml-0.5" /> : <ChevronUp className="w-2.5 h-2.5 ml-0.5" />}
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* Inline Reply Form for Parent Comment */}
+                              {isReplyingToThisComment && (
+                                <motion.div
+                                  initial={{ opacity: 0, height: 0 }}
+                                  animate={{ opacity: 1, height: "auto" }}
+                                  exit={{ opacity: 0, height: 0 }}
+                                  className="ml-8 mt-2.5 p-2.5 bg-slate-50 dark:bg-slate-950/80 rounded-xl border border-red-200 dark:border-red-900/40 space-y-2"
+                                >
+                                  <div className="flex items-center justify-between text-[10px] text-red-600 dark:text-red-400 font-bold border-b border-red-100 dark:border-red-900/30 pb-1">
+                                    <span className="flex items-center gap-1">
+                                      <Reply className="w-3 h-3" /> Membalas <strong className="text-slate-800 dark:text-white">@{activeReplyTargetUser}</strong>
+                                    </span>
+                                    <button 
+                                      onClick={() => {
+                                        setActiveReplyId(null);
+                                        setActiveReplyParentId(null);
+                                        setActiveReplyTargetUser("");
+                                      }}
+                                      className="text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+
+                                  <input
+                                    type="text"
+                                    placeholder="Nama Anda..."
+                                    value={replyUserName}
+                                    onChange={(e) => setReplyUserName(e.target.value)}
+                                    className="w-full text-xs px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg focus:outline-none text-slate-800 dark:text-slate-100"
+                                  />
+
+                                  <textarea
+                                    placeholder={`Tulis balasan untuk @${activeReplyTargetUser}...`}
+                                    rows={2}
+                                    value={replyText}
+                                    onChange={(e) => setReplyText(e.target.value)}
+                                    className="w-full text-xs px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg focus:outline-none text-slate-800 dark:text-slate-100"
+                                  />
+
+                                  <div className="flex justify-end gap-2">
+                                    <button
+                                      onClick={() => {
+                                        setActiveReplyId(null);
+                                        setActiveReplyParentId(null);
+                                        setActiveReplyTargetUser("");
+                                      }}
+                                      className="px-2.5 py-1 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold rounded-lg"
+                                    >
+                                      Batal
+                                    </button>
+                                    <button
+                                      onClick={() => handleAddReply(comment.id, activeReplyTargetUser)}
+                                      className="px-3 py-1 bg-gradient-to-r from-[#FF3B30] to-[#E60023] text-white text-[10px] font-bold uppercase tracking-wider rounded-lg shadow-sm"
+                                    >
+                                      Kirim Balasan
+                                    </button>
+                                  </div>
+                                </motion.div>
+                              )}
+
+                              {/* Render Nested Replies Thread */}
+                              {hasReplies && !isCollapsed && (
+                                <div className="ml-5 sm:ml-7 pl-3 border-l-2 border-[#E60023]/40 dark:border-red-500/40 space-y-2.5 mt-2.5">
+                                  {comment.replies.map((reply) => {
+                                    const isReplyingToChild = activeReplyId === reply.id;
+                                    return (
+                                      <div key={reply.id} className="text-xs bg-slate-50/80 dark:bg-slate-950/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-850/80">
+                                        {/* Reply Header */}
+                                        <div className="flex justify-between items-start">
+                                          <div className="flex items-center gap-1.5">
+                                            <img src={reply.avatar} alt={reply.user} className="w-5 h-5 rounded-full bg-slate-200 border border-slate-300 dark:border-slate-800" />
+                                            <div className="flex items-center flex-wrap gap-1">
+                                              <span className="font-bold text-slate-800 dark:text-slate-200 text-[11px]">{reply.user}</span>
+                                              {(reply.user.includes("Editor") || reply.user.includes("Redaksi")) && (
+                                                <span className="text-[8px] bg-red-600 text-white font-extrabold px-1.5 py-0.2 rounded-full uppercase">REDAKSI</span>
+                                              )}
+                                              <span className="text-[9px] text-slate-400">• {formatCommentTime(reply.timestamp)}</span>
+                                            </div>
+                                          </div>
+
+                                          <button
+                                            onClick={() => handleLikeComment(reply.id)}
+                                            className="flex items-center gap-0.5 text-[9px] font-bold text-slate-500 dark:text-slate-400 hover:text-red-500 bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-800"
+                                          >
+                                            <ThumbsUp className="w-2 h-2" />
+                                            <span>{reply.likes}</span>
+                                          </button>
+                                        </div>
+
+                                        {/* Reply Content */}
+                                        <p className="text-slate-600 dark:text-slate-300 mt-1 ml-6 leading-relaxed text-[11px]">
+                                          {reply.content}
+                                        </p>
+
+                                        {/* Reply Action button */}
+                                        <div className="ml-6 mt-1 flex items-center gap-2">
+                                          <button
+                                            onClick={() => {
+                                              if (activeReplyId === reply.id) {
+                                                setActiveReplyId(null);
+                                                setActiveReplyParentId(null);
+                                                setActiveReplyTargetUser("");
+                                              } else {
+                                                setActiveReplyId(reply.id);
+                                                setActiveReplyParentId(comment.id);
+                                                setActiveReplyTargetUser(reply.user);
+                                                setReplyUserName(newCommentName || "");
+                                              }
+                                            }}
+                                            className="text-[9.5px] font-bold text-[#E60023] dark:text-red-400 hover:underline flex items-center gap-0.5 uppercase tracking-wider"
+                                          >
+                                            <Reply className="w-2.5 h-2.5" />
+                                            {isReplyingToChild ? "Batal" : "Balas"}
+                                          </button>
+                                        </div>
+
+                                        {/* Inline Reply Form when replying directly to this nested reply */}
+                                        {isReplyingToChild && (
+                                          <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: "auto" }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            className="mt-2 p-2 bg-white dark:bg-slate-900 rounded-lg border border-red-300 dark:border-red-900/50 space-y-1.5"
+                                          >
+                                            <div className="flex items-center justify-between text-[9px] text-red-600 dark:text-red-400 font-bold">
+                                              <span>Membalas @{activeReplyTargetUser}</span>
+                                              <button 
+                                                onClick={() => {
+                                                  setActiveReplyId(null);
+                                                  setActiveReplyParentId(null);
+                                                  setActiveReplyTargetUser("");
+                                                }}
+                                                className="text-slate-400 hover:text-slate-600"
+                                              >
+                                                <X className="w-2.5 h-2.5" />
+                                              </button>
+                                            </div>
+
+                                            <input
+                                              type="text"
+                                              placeholder="Nama Anda..."
+                                              value={replyUserName}
+                                              onChange={(e) => setReplyUserName(e.target.value)}
+                                              className="w-full text-[11px] px-2 py-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded focus:outline-none text-slate-800 dark:text-slate-100"
+                                            />
+
+                                            <textarea
+                                              placeholder={`Tulis balasan untuk @${activeReplyTargetUser}...`}
+                                              rows={2}
+                                              value={replyText}
+                                              onChange={(e) => setReplyText(e.target.value)}
+                                              className="w-full text-[11px] px-2 py-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded focus:outline-none text-slate-800 dark:text-slate-100"
+                                            />
+
+                                            <div className="flex justify-end gap-1.5">
+                                              <button
+                                                onClick={() => {
+                                                  setActiveReplyId(null);
+                                                  setActiveReplyParentId(null);
+                                                  setActiveReplyTargetUser("");
+                                                }}
+                                                className="px-2 py-0.5 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[9px] font-bold rounded"
+                                              >
+                                                Batal
+                                              </button>
+                                              <button
+                                                onClick={() => handleAddReply(comment.id, activeReplyTargetUser)}
+                                                className="px-2.5 py-0.5 bg-red-600 text-white text-[9px] font-bold uppercase rounded"
+                                              >
+                                                Kirim
+                                              </button>
+                                            </div>
+                                          </motion.div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </motion.div>
+                          );
+                        })}
                       </AnimatePresence>
                     );
                   })()}

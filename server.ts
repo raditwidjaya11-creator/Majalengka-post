@@ -831,11 +831,18 @@ async function startServer() {
     const wss = new WebSocketServer({ noServer: true });
 
     // Manage chat messages in memory
-    const chatHistory: Array<{ id: number; name: string; text: string; time: string }> = [
-      { id: 1, name: "Ahmad_Majalengka", text: "Selamat pagi Majalengka Post! Terus suarakan berita kredibel.", time: "09:00" },
-      { id: 2, name: "Siti_Jatiwangi", text: "Kondisi cuaca di Jatiwangi hari ini sangat cerah, salam hangat.", time: "09:01" },
-      { id: 3, name: "Budi_Kadipaten", text: "Kabar Tol Cipali seksi Kertajati bagaimana ya?", time: "09:02" },
-      { id: 4, name: "Rina_Talaga", text: "Menunggu liputan langsung dari lokasi bencana.", time: "09:03" }
+    const chatHistory: Array<{
+      id: number;
+      name: string;
+      text: string;
+      time: string;
+      likes?: number;
+      replyTo?: { id: number; name: string; text: string };
+    }> = [
+      { id: 1, name: "Ahmad_Majalengka", text: "Selamat pagi Majalengka Post! Terus suarakan berita kredibel.", time: "09:00", likes: 3 },
+      { id: 2, name: "Siti_Jatiwangi", text: "Kondisi cuaca di Jatiwangi hari ini sangat cerah, salam hangat.", time: "09:01", likes: 1 },
+      { id: 3, name: "Budi_Kadipaten", text: "Kabar Tol Cipali seksi Kertajati bagaimana ya?", time: "09:02", likes: 0 },
+      { id: 4, name: "Rina_Talaga", text: "Menunggu liputan langsung dari lokasi bencana.", time: "09:03", likes: 2, replyTo: { id: 3, name: "Budi_Kadipaten", text: "Kabar Tol Cipali seksi Kertajati bagaimana ya?" } }
     ];
 
     // Track active connection count
@@ -859,7 +866,13 @@ async function startServer() {
               id: Date.now(),
               name: parsed.name.trim().substring(0, 30) || "Anonim",
               text: parsed.text.trim().substring(0, 500),
-              time: timeNow
+              time: timeNow,
+              likes: 0,
+              replyTo: parsed.replyTo ? {
+                id: Number(parsed.replyTo.id),
+                name: String(parsed.replyTo.name).trim().substring(0, 30),
+                text: String(parsed.replyTo.text).trim().substring(0, 150)
+              } : undefined
             };
 
             chatHistory.push(newChat);
@@ -868,6 +881,12 @@ async function startServer() {
             }
 
             broadcast({ type: "message", chat: newChat });
+          } else if (parsed.type === "like" && parsed.msgId) {
+            const target = chatHistory.find(c => c.id === Number(parsed.msgId));
+            if (target) {
+              target.likes = (target.likes || 0) + 1;
+              broadcast({ type: "like", msgId: target.id, likes: target.likes });
+            }
           } else if (parsed.type === "reaction" && parsed.emoji) {
             broadcast({ type: "reaction", emoji: parsed.emoji, id: Date.now() + Math.random() });
           }

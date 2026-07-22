@@ -20,7 +20,7 @@ import {
 import CompanyProfile, { CompanyProfilePage } from "./components/CompanyProfile";
 import TermsPage from "./components/TermsPage";
 import PrivacyPolicyPage from "./components/PrivacyPolicyPage";
-import { Palette, Sliders, Newspaper, Eye, ShieldAlert, BookOpen, Lock, Unlock, KeyRound, Home, Video, Layers, User, Moon, Sun, Sparkles, Database, CloudLightning, CheckCircle2, AlertTriangle, RefreshCw, Copy, ExternalLink, HelpCircle, BellRing, Tv, Radio, MessageSquare, Play, Pause, Volume2, Maximize, Send } from "lucide-react";
+import { Palette, Sliders, Newspaper, Eye, ShieldAlert, BookOpen, Lock, Unlock, KeyRound, Home, Video, Layers, User, Moon, Sun, Sparkles, Database, CloudLightning, CheckCircle2, AlertTriangle, RefreshCw, Copy, ExternalLink, HelpCircle, BellRing, Tv, Radio, MessageSquare, Play, Pause, Volume2, Maximize, Send, Reply, Heart, Share2, Mail, Check, Share } from "lucide-react";
 import { slugify } from "./utils/slugify";
 import { safeLocalStorage } from "./lib/safeStorage";
 import { requestNotificationPermission, getNotificationPermissionStatus, showNewArticleNotification } from "./utils/notification";
@@ -458,8 +458,18 @@ export default function App() {
   }, [showLiveStreamModal, liveStreamActive, liveStreamType, isOfflineMode]);
 
   // Real-Time live stream chat states
-  const [liveStreamChats, setLiveStreamChats] = useState<Array<{ id: number; name: string; text: string; time: string }>>([]);
+  const [liveStreamChats, setLiveStreamChats] = useState<Array<{
+    id: number;
+    name: string;
+    text: string;
+    time: string;
+    likes?: number;
+    replyTo?: { id: number; name: string; text: string };
+  }>>([]);
   const [newLiveStreamChat, setNewLiveStreamChat] = useState<string>("");
+  const [replyingToMsg, setReplyingToMsg] = useState<{ id: number; name: string; text: string } | null>(null);
+  const [likedMsgIds, setLikedMsgIds] = useState<number[]>([]);
+  const [shareCopiedToast, setShareCopiedToast] = useState<boolean>(false);
   const [liveStreamViewersLocal, setLiveStreamViewersLocal] = useState<number>(liveStreamViewerCount);
   const [floatingReactions, setFloatingReactions] = useState<Array<{ id: number; emoji: string; left: number; rotate: number; scale: number }>>([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false);
@@ -518,6 +528,8 @@ export default function App() {
             }
             return [...prev, data.chat].slice(-100);
           });
+        } else if (data.type === "like" && data.msgId) {
+          setLiveStreamChats(prev => prev.map(item => item.id === Number(data.msgId) ? { ...item, likes: (item.likes || 0) + 1 } : item));
         } else if (data.type === "reaction" && data.emoji) {
           const newReaction = {
             id: data.id || Date.now() + Math.random(),
@@ -2302,11 +2314,19 @@ export default function App() {
 
                     {/* Interactive Share Portal for Live Stream */}
                     <div className="border-t border-slate-800/80 mt-5 pt-4">
-                      <span className={`text-[10px] font-black uppercase tracking-wider ${liveStreamTheme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>Bagikan Siaran Langsung Ini</span>
+                      <div className="flex items-center justify-between">
+                        <span className={`text-[10px] font-black uppercase tracking-wider ${liveStreamTheme === 'light' ? 'text-slate-500' : 'text-slate-400'}`}>Bagikan Siaran Langsung Ini</span>
+                        {shareCopiedToast && (
+                          <span className="text-[10px] text-green-400 font-bold bg-green-950/60 border border-green-800 px-2 py-0.5 rounded animate-fade-in flex items-center gap-1">
+                            <Check className="w-3 h-3 text-green-400" /> Tautan Tersalin!
+                          </span>
+                        )}
+                      </div>
+
                       <div className="flex flex-wrap items-center gap-2 mt-2">
                         {/* WhatsApp */}
                         <a
-                          href={`https://wa.me/?text=${encodeURIComponent(`*LIVE STREAMING*: *${liveStreamTitle}*\n\nTonton siaran langsung Majalengka Post TV sekarang:\n${window.location.origin}`)}`}
+                          href={`https://wa.me/?text=${encodeURIComponent(`*🔴 LIVE STREAMING*: *${liveStreamTitle}*\n\nTonton siaran langsung Majalengka Post TV sekarang:\n${window.location.origin}/?livetv=true`)}`}
                           target="_blank"
                           rel="noreferrer"
                           onClick={async () => {
@@ -2318,14 +2338,14 @@ export default function App() {
                               }, 0);
                             } catch {}
                           }}
-                          className="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold px-3 py-1.5 rounded-lg flex items-center gap-1.5 uppercase tracking-wider transition-all"
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 uppercase tracking-wider transition-all"
                         >
                           WhatsApp
                         </a>
                         
                         {/* Facebook */}
                         <a
-                          href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.origin)}`}
+                          href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.origin + "/?livetv=true")}`}
                           target="_blank"
                           rel="noreferrer"
                           onClick={async () => {
@@ -2337,14 +2357,14 @@ export default function App() {
                               }, 0);
                             } catch {}
                           }}
-                          className="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold px-3 py-1.5 rounded-lg flex items-center gap-1.5 uppercase tracking-wider transition-all"
+                          className="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 uppercase tracking-wider transition-all"
                         >
                           Facebook
                         </a>
 
-                        {/* Twitter */}
+                        {/* Twitter / X */}
                         <a
-                          href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`LIVE STREAMING: ${liveStreamTitle}`)}&url=${encodeURIComponent(window.location.origin)}`}
+                          href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`🔴 LIVE STREAMING: ${liveStreamTitle}`)}&url=${encodeURIComponent(window.location.origin + "/?livetv=true")}`}
                           target="_blank"
                           rel="noreferrer"
                           onClick={async () => {
@@ -2356,34 +2376,112 @@ export default function App() {
                               }, 0);
                             } catch {}
                           }}
-                          className="bg-sky-600 hover:bg-sky-500 text-white text-[10px] font-extrabold px-3 py-1.5 rounded-lg flex items-center gap-1.5 uppercase tracking-wider transition-all"
+                          className="bg-sky-600 hover:bg-sky-500 text-white text-[10px] font-extrabold px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 uppercase tracking-wider transition-all"
                         >
                           Twitter/X
                         </a>
 
+                        {/* Email */}
+                        <a
+                          href={`mailto:?subject=${encodeURIComponent(`Live Streaming Majalengka Post: ${liveStreamTitle}`)}&body=${encodeURIComponent(`Saksikan siaran langsung Majalengka Post TV:\n${liveStreamTitle}\n\nTonton langsung di:\n${window.location.origin}/?livetv=true`)}`}
+                          onClick={async () => {
+                            try {
+                              await safeFetchJson("/api/shares/increment", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ articleId: "livestream", platform: "email" })
+                              }, 0);
+                            } catch {}
+                          }}
+                          className="bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-extrabold px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 uppercase tracking-wider transition-all"
+                        >
+                          <Mail className="w-3 h-3" />
+                          Email
+                        </a>
+
+                        {/* Telegram */}
+                        <a
+                          href={`https://t.me/share/url?url=${encodeURIComponent(window.location.origin + "/?livetv=true")}&text=${encodeURIComponent(`🔴 LIVE STREAMING: ${liveStreamTitle}`)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={async () => {
+                            try {
+                              await safeFetchJson("/api/shares/increment", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ articleId: "livestream", platform: "telegram" })
+                              }, 0);
+                            } catch {}
+                          }}
+                          className="bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-extrabold px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 uppercase tracking-wider transition-all"
+                        >
+                          Telegram
+                        </a>
+
                         {/* Copy Link */}
                         <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(window.location.origin + "/?livetv=true");
-                            alert("Tautan live streaming berhasil disalin ke papan klip!");
+                          onClick={async () => {
+                            try {
+                              await navigator.clipboard.writeText(window.location.origin + "/?livetv=true");
+                              setShareCopiedToast(true);
+                              setTimeout(() => setShareCopiedToast(false), 2500);
+                              await safeFetchJson("/api/shares/increment", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ articleId: "livestream", platform: "copy_link" })
+                              }, 0);
+                            } catch {
+                              alert("Tautan live streaming berhasil disalin ke papan klip!");
+                            }
                           }}
-                          className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-extrabold px-3 py-1.5 rounded-lg flex items-center gap-1.5 uppercase tracking-wider transition-all border border-slate-700"
+                          className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-extrabold px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 uppercase tracking-wider transition-all border border-slate-700"
                         >
-                          <Copy className="w-3 h-3" />
+                          <Copy className="w-3 h-3 text-red-400" />
                           Salin Link
+                        </button>
+
+                        {/* Web Share / Lainnya */}
+                        <button
+                          onClick={async () => {
+                            const shareData = {
+                              title: `LIVE STREAMING: ${liveStreamTitle}`,
+                              text: `Saksikan siaran langsung Majalengka Post TV: ${liveStreamTitle}`,
+                              url: `${window.location.origin}/?livetv=true`
+                            };
+                            if (navigator.share) {
+                              try {
+                                await navigator.share(shareData);
+                                await safeFetchJson("/api/shares/increment", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ articleId: "livestream", platform: "web_share" })
+                                }, 0);
+                              } catch (e) {
+                                // share dismissed
+                              }
+                            } else {
+                              await navigator.clipboard.writeText(shareData.url);
+                              setShareCopiedToast(true);
+                              setTimeout(() => setShareCopiedToast(false), 2500);
+                            }
+                          }}
+                          className="bg-red-600 hover:bg-red-500 text-white text-[10px] font-extrabold px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 uppercase tracking-wider transition-all shadow-md hover:shadow-red-600/20"
+                        >
+                          <Share2 className="w-3 h-3" />
+                          Lainnya...
                         </button>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Right Column: Live Chat Screen */}
-                <div className="bg-slate-950 p-5 flex flex-col h-[380px] md:h-auto border-t md:border-t-0 md:border-l border-slate-800 overflow-hidden">
+                {/* Right Column: Live Chat & Comments Screen */}
+                <div className="bg-slate-950 p-5 flex flex-col h-[420px] md:h-auto border-t md:border-t-0 md:border-l border-slate-800 overflow-hidden">
                   <div className="border-b border-slate-800 pb-3 mb-3 text-left">
                     <div className="flex items-center justify-between">
                       <h3 className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5 text-slate-200">
                         <MessageSquare className="w-4 h-4 text-red-500 animate-pulse" />
-                        Obrolan Langsung
+                        Komentar & Obrolan Langsung
                       </h3>
                       {/* Live real-time viewer count from WS connection */}
                       <span className="text-[10px] text-red-500 font-extrabold flex items-center gap-1.5 bg-red-950/40 px-2 py-0.5 rounded border border-red-900/30">
@@ -2391,7 +2489,7 @@ export default function App() {
                         {liveStreamViewersLocal} Pemirsa
                       </span>
                     </div>
-                    <p className="text-[9px] text-slate-500 mt-0.5">Berkomentarlah secara positif dan dukung jurnalisme lokal.</p>
+                    <p className="text-[9px] text-slate-500 mt-0.5">Saling berkomentarlah secara santun dan dukung jurnalisme lokal Majalengka.</p>
 
                     {/* Chat Name customizer */}
                     <div className="mt-2.5 p-2 bg-slate-900/40 rounded-lg border border-slate-900 flex items-center justify-between gap-2">
@@ -2450,23 +2548,70 @@ export default function App() {
                   </div>
 
                   {/* Message Stream */}
-                  <div className="flex-1 overflow-y-auto space-y-3 pr-1 text-left scrollbar-thin scrollbar-thumb-slate-800">
+                  <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 text-left scrollbar-thin scrollbar-thumb-slate-800">
                     {liveStreamChats.length === 0 ? (
-                      <div className="h-full flex items-center justify-center text-slate-600 text-[10px] font-bold uppercase">
-                        Belum ada pesan obrolan...
+                      <div className="h-full flex flex-col items-center justify-center text-slate-600 text-[10px] font-bold uppercase gap-1">
+                        <MessageSquare className="w-5 h-5 opacity-40" />
+                        Belum ada komentar pembaca...
                       </div>
                     ) : (
                       liveStreamChats.map((msg) => {
                         const isMe = msg.name === chatUsername;
+                        const isLiked = likedMsgIds.includes(msg.id);
                         return (
-                          <div key={msg.id} className="text-[11px] leading-relaxed animate-fade-in bg-slate-900/50 p-2 rounded-xl border border-slate-900">
-                            <div className="flex items-center justify-between">
-                              <span className={`font-black uppercase text-[10px] tracking-wide ${isMe ? "text-amber-400" : "text-red-400"}`}>
-                                {msg.name} {isMe && " (Saya)"}
+                          <div key={msg.id} className="text-[11px] leading-relaxed animate-fade-in bg-slate-900/60 hover:bg-slate-900/80 p-2.5 rounded-xl border border-slate-900/90 transition-all group">
+                            {/* Header: Name & Time */}
+                            <div className="flex items-center justify-between gap-1 mb-1">
+                              <span className={`font-black uppercase text-[10px] tracking-wide flex items-center gap-1 ${isMe ? "text-amber-400" : "text-red-400"}`}>
+                                <span className={`w-2 h-2 rounded-full ${isMe ? "bg-amber-400" : "bg-red-500"}`}></span>
+                                {msg.name} {isMe && <span className="text-[9px] text-slate-400 font-normal">(Saya)</span>}
                               </span>
-                              <span className="text-[9px] text-slate-600">{msg.time}</span>
+                              <span className="text-[9px] text-slate-600 font-mono">{msg.time}</span>
                             </div>
-                            <p className="text-slate-300 mt-0.5 font-medium">{msg.text}</p>
+
+                            {/* Quoted Reply if message is a response to another comment */}
+                            {msg.replyTo && (
+                              <div className="my-1.5 p-1.5 rounded-lg bg-slate-950/80 border-l-2 border-red-500 text-[10px] text-slate-400">
+                                <span className="text-red-400 font-bold flex items-center gap-1 mb-0.5">
+                                  <Reply className="w-3 h-3 shrink-0" /> Membalas @{msg.replyTo.name}:
+                                </span>
+                                <p className="italic line-clamp-2 text-slate-400 pl-1">"{msg.replyTo.text}"</p>
+                              </div>
+                            )}
+
+                            {/* Comment Body */}
+                            <p className="text-slate-200 font-medium whitespace-pre-wrap break-words">{msg.text}</p>
+
+                            {/* Actions Bar: Reply (Balas) & Like (Suka) */}
+                            <div className="flex items-center justify-between border-t border-slate-900/80 mt-2 pt-1.5 text-[9px]">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setReplyingToMsg({ id: msg.id, name: msg.name, text: msg.text });
+                                }}
+                                className="text-slate-400 hover:text-red-400 font-extrabold flex items-center gap-1 uppercase tracking-wider transition-colors"
+                              >
+                                <Reply className="w-3 h-3 text-slate-500 hover:text-red-400" />
+                                Balas
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (likedMsgIds.includes(msg.id)) return;
+                                  setLikedMsgIds(prev => [...prev, msg.id]);
+                                  if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+                                    socketRef.current.send(JSON.stringify({ type: "like", msgId: msg.id }));
+                                  } else {
+                                    setLiveStreamChats(prev => prev.map(item => item.id === msg.id ? { ...item, likes: (item.likes || 0) + 1 } : item));
+                                  }
+                                }}
+                                className={`font-bold flex items-center gap-1 px-1.5 py-0.5 rounded transition-all ${isLiked ? "text-red-400 bg-red-950/40" : "text-slate-500 hover:text-red-400"}`}
+                              >
+                                <Heart className={`w-3 h-3 ${isLiked ? "fill-red-500 text-red-500" : ""}`} />
+                                <span>{msg.likes || 0}</span>
+                              </button>
+                            </div>
                           </div>
                         );
                       })
@@ -2535,6 +2680,26 @@ export default function App() {
                     </div>
                   </div>
 
+                  {/* Active Reply Banner if user clicked 'Balas' */}
+                  {replyingToMsg && (
+                    <div className="mt-2 bg-red-950/40 border border-red-900/60 px-2.5 py-1.5 rounded-xl text-[10px] text-red-300 flex items-center justify-between animate-fade-in text-left">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <Reply className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                        <span className="truncate">
+                          Membalas <strong className="text-white uppercase font-black">@{replyingToMsg.name}</strong>: <span className="italic opacity-80">"{replyingToMsg.text}"</span>
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setReplyingToMsg(null)}
+                        className="text-slate-400 hover:text-white font-extrabold text-xs ml-2 px-1 hover:bg-red-900/50 rounded"
+                        title="Batal Membalas"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+
                   {/* Input form */}
                   <form
                     onSubmit={(e) => {
@@ -2545,25 +2710,31 @@ export default function App() {
                         socketRef.current.send(JSON.stringify({
                           type: "message",
                           name: chatUsername,
-                          text: newLiveStreamChat
+                          text: newLiveStreamChat,
+                          replyTo: replyingToMsg ? {
+                            id: replyingToMsg.id,
+                            name: replyingToMsg.name,
+                            text: replyingToMsg.text
+                          } : undefined
                         }));
                         setNewLiveStreamChat("");
+                        setReplyingToMsg(null);
                       } else {
                         alert("Koneksi obrolan terputus. Silakan coba sesaat lagi.");
                       }
                     }}
-                    className="border-t border-slate-800 pt-3 mt-3 flex gap-2"
+                    className="border-t border-slate-800 pt-2.5 mt-2 flex gap-2"
                   >
                     <input
                       type="text"
-                      placeholder="Tulis pesan obrolan..."
+                      placeholder={replyingToMsg ? `Tulis balasan untuk @${replyingToMsg.name}...` : "Tulis komentar atau obrolan..."}
                       value={newLiveStreamChat}
                       onChange={(e) => setNewLiveStreamChat(e.target.value)}
                       className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-[11px] focus:outline-none focus:border-red-500 text-white placeholder-slate-500"
                     />
                     <button
                       type="submit"
-                      className="bg-red-600 hover:bg-red-500 text-white rounded-xl px-3 py-2 flex items-center justify-center transition-all shrink-0"
+                      className="bg-red-600 hover:bg-red-500 text-white rounded-xl px-3.5 py-2 flex items-center justify-center transition-all shrink-0 font-bold text-xs"
                     >
                       <Send className="w-3.5 h-3.5" />
                     </button>
