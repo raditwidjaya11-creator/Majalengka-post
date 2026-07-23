@@ -1463,7 +1463,7 @@ export default function MobilePremiumApp({
 
                   {/* Speech Rate buttons */}
                   <div className="flex items-center bg-slate-200/70 dark:bg-slate-800 rounded-xl p-0.5 ml-0.5">
-                    {[0.8, 1.0, 1.2, 1.5].map(rate => (
+                    {[0.5, 1.0, 1.5, 2.0].map(rate => (
                       <button
                         key={rate}
                         onClick={() => changeSpeechRate(rate)}
@@ -2993,7 +2993,7 @@ export default function MobilePremiumApp({
               {/* Speed rate toggle button */}
               <button
                 onClick={() => {
-                  const rates = [0.8, 1.0, 1.2, 1.5];
+                  const rates = [0.5, 1.0, 1.5, 2.0];
                   const nextIndex = (rates.indexOf(speechRate) + 1) % rates.length;
                   changeSpeechRate(rates[nextIndex]);
                 }}
