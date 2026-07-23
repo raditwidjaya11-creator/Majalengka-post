@@ -16,6 +16,7 @@ import logoImg from "../assets/images/majalengka_post_logo_1783851016975.jpg";
 import { getYouTubeEmbedUrl } from "../lib/youtube";
 import Footer from "./Footer";
 import OpeningBannerModal from "./OpeningBannerModal";
+import { safeLocalStorage } from "../lib/safeStorage";
 
 interface MobilePremiumAppProps {
   articles: Article[];
@@ -220,7 +221,7 @@ export default function MobilePremiumApp({
   // Comments state per article
   const [articleComments, setArticleComments] = useState<Comment[]>(() => {
     try {
-      const saved = localStorage.getItem("majalengka_comments_v1");
+      const saved = safeLocalStorage.getItem("majalengka_comments_v1");
       return saved ? JSON.parse(saved) : INITIAL_COMMENTS;
     } catch {
       return INITIAL_COMMENTS;
@@ -305,7 +306,7 @@ export default function MobilePremiumApp({
         return c;
       });
       try {
-        localStorage.setItem("majalengka_comments_v1", JSON.stringify(updated));
+        safeLocalStorage.setItem("majalengka_comments_v1", JSON.stringify(updated));
       } catch (err) {
         console.warn("Failed to persist comments state", err);
       }
@@ -332,7 +333,7 @@ export default function MobilePremiumApp({
     setArticleComments(prev => {
       const updated = [newComment, ...prev];
       try {
-        localStorage.setItem("majalengka_comments_v1", JSON.stringify(updated));
+        safeLocalStorage.setItem("majalengka_comments_v1", JSON.stringify(updated));
       } catch (err) {
         console.warn("Failed to persist comments state", err);
       }
@@ -398,7 +399,7 @@ export default function MobilePremiumApp({
       });
 
       try {
-        localStorage.setItem("majalengka_comments_v1", JSON.stringify(updated));
+        safeLocalStorage.setItem("majalengka_comments_v1", JSON.stringify(updated));
       } catch (err) {
         console.warn("Failed to persist comments state", err);
       }
@@ -448,7 +449,7 @@ export default function MobilePremiumApp({
   const [showArticleEmojiPicker, setShowArticleEmojiPicker] = useState<boolean>(false);
   const [articleReactions, setArticleReactions] = useState<Record<string, Record<string, number>>>(() => {
     try {
-      const saved = localStorage.getItem("majalengka_article_reactions_v1");
+      const saved = safeLocalStorage.getItem("majalengka_article_reactions_v1");
       return saved ? JSON.parse(saved) : {};
     } catch {
       return {};
@@ -468,7 +469,7 @@ export default function MobilePremiumApp({
         }
       };
       try {
-        localStorage.setItem("majalengka_article_reactions_v1", JSON.stringify(updated));
+        safeLocalStorage.setItem("majalengka_article_reactions_v1", JSON.stringify(updated));
       } catch (err) {
         console.warn("Failed to persist article reactions", err);
       }

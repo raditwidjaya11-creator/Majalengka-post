@@ -13,8 +13,8 @@ class SafeStorage implements Storage {
     this.memoryStore = {};
     try {
       window.localStorage.clear();
-    } catch (e) {
-      console.warn("localStorage.clear failed:", e);
+    } catch {
+      // Safe fallback
     }
   }
 
@@ -22,8 +22,8 @@ class SafeStorage implements Storage {
     try {
       const val = window.localStorage.getItem(key);
       if (val !== null) return val;
-    } catch (e) {
-      // Ignore and fallback to memoryStore
+    } catch {
+      // Fallback to memoryStore
     }
     return this.memoryStore[key] !== undefined ? this.memoryStore[key] : null;
   }
@@ -41,34 +41,49 @@ class SafeStorage implements Storage {
     delete this.memoryStore[key];
     try {
       window.localStorage.removeItem(key);
-    } catch (e) {
-      console.warn("localStorage.removeItem failed:", e);
+    } catch {
+      // Safe fallback
     }
   }
 
   setItem(key: string, value: string): void {
-    // Always keep in memory fallback
-    this.memoryStore[key] = String(value);
+    // Always keep full fidelity copy in memory for current session
+    const valString = String(value);
+    this.memoryStore[key] = valString;
 
     try {
-      window.localStorage.setItem(key, value);
-    } catch (e) {
-      console.warn(`[safeLocalStorage] localStorage.setItem failed for "${key}" (QuotaExceeded or restricted). Kept in memory fallback.`, e);
-      // Attempt to clean up temporary cache items if quota exceeded
+      window.localStorage.setItem(key, valString);
+    } catch {
+      // QuotaExceededError or restricted storage in sandboxed iframe
+      // 1. Attempt to free up storage by pruning temporary/cached keys
       try {
-        for (let i = window.localStorage.length - 1; i >= 0; i--) {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < window.localStorage.length; i++) {
           const k = window.localStorage.key(i);
-          if (k && (k.startsWith("temp_") || k.includes("draft") || k.includes("autosave"))) {
-            window.localStorage.removeItem(k);
+          if (k && k !== key && (k.startsWith("temp_") || k.includes("draft") || k.includes("autosave") || k.includes("valas") || k.includes("poll"))) {
+            keysToRemove.push(k);
           }
         }
-        window.localStorage.setItem(key, value);
-      } catch (err2) {
-        // Safe silence - already stored in memoryStore so the application will continue smoothly
+        keysToRemove.forEach(k => window.localStorage.removeItem(k));
+        window.localStorage.setItem(key, valString);
+        return;
+      } catch {
+        // Proceed to slimmed fallback if quota is still exceeded
+      }
+
+      // 2. If payload contains massive base64 images, store a lightweight copy in localStorage
+      try {
+        if (valString.includes("data:image")) {
+          const slimmed = valString.replace(/data:image\/[a-zA-Z]+;base64,[^"']{500,}/g, "");
+          window.localStorage.setItem(key, slimmed);
+        }
+      } catch {
+        // 3. Silent fallback - memoryStore safely retains data for current runtime
       }
     }
   }
 }
 
 export const safeLocalStorage: Storage = new SafeStorage();
+
 

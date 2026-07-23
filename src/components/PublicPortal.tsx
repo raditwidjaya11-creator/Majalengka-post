@@ -15,6 +15,7 @@ import { Article, Comment, AdBanner, Poll, ValasRate } from "../types";
 import { CATEGORIES, SHOLAT_SCHEDULE, CURRENCY_RATES, STOCK_MARKET, INITIAL_COMMENTS } from "../mockData";
 import { slugify } from "../utils/slugify";
 import { getYouTubeEmbedUrl } from "../lib/youtube";
+import { safeLocalStorage } from "../lib/safeStorage";
 
 interface PublicPortalProps {
   articles: Article[];
@@ -109,7 +110,7 @@ export default function PublicPortal({
   const [showArticleEmojiPicker, setShowArticleEmojiPicker] = useState<boolean>(false);
   const [articleReactions, setArticleReactions] = useState<Record<string, Record<string, number>>>(() => {
     try {
-      const saved = localStorage.getItem("majalengka_article_reactions_v1");
+      const saved = safeLocalStorage.getItem("majalengka_article_reactions_v1");
       return saved ? JSON.parse(saved) : {};
     } catch {
       return {};
@@ -129,7 +130,7 @@ export default function PublicPortal({
         }
       };
       try {
-        localStorage.setItem("majalengka_article_reactions_v1", JSON.stringify(updated));
+        safeLocalStorage.setItem("majalengka_article_reactions_v1", JSON.stringify(updated));
       } catch (err) {
         console.warn("Failed to persist article reactions", err);
       }
