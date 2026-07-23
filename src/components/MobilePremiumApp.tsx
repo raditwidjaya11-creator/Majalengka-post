@@ -1332,7 +1332,7 @@ export default function MobilePremiumApp({
               animate={{ x: ["0%", "-50%"] }}
               transition={{
                 ease: "linear",
-                duration: 20,
+                duration: 45,
                 repeat: Infinity
               }}
               className="flex items-center gap-3 whitespace-nowrap py-0.5 text-[10px] font-extrabold font-mono w-max"
@@ -1365,7 +1365,7 @@ export default function MobilePremiumApp({
               BREAKING
             </span>
             <div className="flex-1 overflow-hidden relative">
-              <div className="whitespace-nowrap animate-marquee text-xs font-bold uppercase tracking-wide">
+              <div className="whitespace-nowrap animate-marquee text-xs font-bold uppercase tracking-wide hover:[animation-play-state:paused] cursor-pointer">
                 {breakingArticles.map((art, idx) => (
                   <span key={art.id} className="mr-12 inline-block cursor-pointer" onClick={() => onSelectArticle(art)}>
                     🔥 {art.title} •
