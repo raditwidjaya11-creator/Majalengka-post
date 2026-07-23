@@ -695,7 +695,24 @@ export default function MobilePremiumApp({
 
   // Audio Text-to-Speech reader state
   const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
+  const [isPausedAudio, setIsPausedAudio] = useState<boolean>(false);
+  const [speechRate, setSpeechRate] = useState<number>(1.0);
+  const [currentlySpeakingTitle, setCurrentlySpeakingTitle] = useState<string>("");
+  const [currentlySpeakingArticle, setCurrentlySpeakingArticle] = useState<Article | null>(null);
   const [audioSpeechInstance, setAudioSpeechInstance] = useState<SpeechSynthesisUtterance | null>(null);
+
+  // Load SpeechSynthesis voices
+  useEffect(() => {
+    if ("speechSynthesis" in window) {
+      const loadVoices = () => {
+        window.speechSynthesis.getVoices();
+      };
+      loadVoices();
+      if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+      }
+    }
+  }, []);
 
   // Active Banners for Mobile
   const activeHeaderBanners = (banners || []).filter(b => b.position === "header" && b.active);
@@ -916,23 +933,71 @@ export default function MobilePremiumApp({
   };
 
   // Text to speech implementation
-  const startSpeech = (text: string) => {
+  const startSpeech = (text: string, article?: Article) => {
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
-      const sentence = text.replace(/<[^>]*>/g, ""); // strip HTML
-      const u = new SpeechSynthesisUtterance(sentence.substring(0, 300));
+      setIsPausedAudio(false);
+
+      const cleanText = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+      if (!cleanText) return;
+
+      const u = new SpeechSynthesisUtterance(cleanText);
       u.lang = "id-ID";
+      u.rate = speechRate;
+
+      // Select Indonesian voice if available
+      const voices = window.speechSynthesis.getVoices();
+      const idVoice = voices.find(v => v.lang.includes("id") || v.lang.includes("ID"));
+      if (idVoice) {
+        u.voice = idVoice;
+      }
+
       u.onend = () => {
         setIsPlayingAudio(false);
+        setIsPausedAudio(false);
+        setCurrentlySpeakingTitle("");
+        setCurrentlySpeakingArticle(null);
       };
       u.onerror = () => {
         setIsPlayingAudio(false);
+        setIsPausedAudio(false);
+        setCurrentlySpeakingTitle("");
+        setCurrentlySpeakingArticle(null);
       };
+
       window.speechSynthesis.speak(u);
       setAudioSpeechInstance(u);
       setIsPlayingAudio(true);
+      if (article) {
+        setCurrentlySpeakingTitle(article.title);
+        setCurrentlySpeakingArticle(article);
+      } else {
+        setCurrentlySpeakingTitle(cleanText.substring(0, 50) + "...");
+        setCurrentlySpeakingArticle(null);
+      }
     } else {
       alert("Browser Anda tidak mendukung Text-to-Speech.");
+    }
+  };
+
+  const pauseSpeech = () => {
+    if ("speechSynthesis" in window) {
+      if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+        window.speechSynthesis.pause();
+        setIsPausedAudio(true);
+      }
+    }
+  };
+
+  const resumeSpeech = () => {
+    if ("speechSynthesis" in window) {
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+        setIsPausedAudio(false);
+      } else if (audioSpeechInstance) {
+        window.speechSynthesis.speak(audioSpeechInstance);
+        setIsPausedAudio(false);
+      }
     }
   };
 
@@ -940,6 +1005,17 @@ export default function MobilePremiumApp({
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
       setIsPlayingAudio(false);
+      setIsPausedAudio(false);
+      setCurrentlySpeakingTitle("");
+      setCurrentlySpeakingArticle(null);
+    }
+  };
+
+  const changeSpeechRate = (rate: number) => {
+    setSpeechRate(rate);
+    if (isPlayingAudio && currentlySpeakingArticle) {
+      const fullText = `${currentlySpeakingArticle.title}. ${currentlySpeakingArticle.summary || ''}. ${currentlySpeakingArticle.content || ''}`;
+      startSpeech(fullText, currentlySpeakingArticle);
     }
   };
 
@@ -1320,46 +1396,106 @@ export default function MobilePremiumApp({
             </div>
 
             {/* Read / Listen Text-to-Speech bar */}
-            <div className="bg-slate-100 dark:bg-slate-900 rounded-2xl p-3 flex items-center justify-between gap-3 mb-5 border border-slate-200/50 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <Volume2 className="w-4 h-4 text-red-600" />
-                <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400">Audio Reader</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                {isPlayingAudio ? (
-                  <button 
-                    onClick={stopSpeech}
-                    className="bg-gradient-to-br from-[#FF3B30] via-[#E60023] to-[#B00020] text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-md border-t border-white/10"
-                  >
-                    <Pause className="w-3 h-3" />
-                    <span>Hentikan</span>
-                  </button>
-                ) : (
-                  <button 
-                    onClick={() => startSpeech(`${selectedArticle.title}. ${selectedArticle.summary}`)}
-                    className="bg-slate-200 dark:bg-slate-800 hover:bg-red-600 dark:hover:bg-red-600 hover:text-white dark:hover:text-white text-slate-700 dark:text-slate-300 text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 transition-colors"
-                  >
-                    <Play className="w-3 h-3" />
-                    <span>Dengarkan</span>
-                  </button>
+            <div className="bg-slate-100 dark:bg-slate-900 rounded-2xl p-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-5 border border-slate-200/60 dark:border-slate-800 shadow-sm">
+              <div className="flex items-center justify-between sm:justify-start gap-2.5">
+                <div className="flex items-center gap-2">
+                  <div className={`p-2 rounded-xl transition-colors ${isPlayingAudio && !isPausedAudio ? 'bg-red-500 text-white animate-pulse' : 'bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400'}`}>
+                    <Volume2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-black text-slate-800 dark:text-slate-200">Audio Reader</span>
+                      <span className="text-[9px] bg-red-600 text-white font-extrabold px-1.5 py-0.2 rounded-full uppercase tracking-wider">TTS AI</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">Dengarkan berita secara otomatis</p>
+                  </div>
+                </div>
+
+                {/* Animated Sound Equalizer */}
+                {isPlayingAudio && !isPausedAudio && (
+                  <div className="flex items-end gap-0.5 h-4 px-1.5">
+                    <span className="w-0.5 bg-red-500 rounded-full animate-[bounce_1s_infinite_100ms] h-full" />
+                    <span className="w-0.5 bg-red-500 rounded-full animate-[bounce_1s_infinite_300ms] h-2/3" />
+                    <span className="w-0.5 bg-red-500 rounded-full animate-[bounce_1s_infinite_200ms] h-5/6" />
+                    <span className="w-0.5 bg-red-500 rounded-full animate-[bounce_1s_infinite_400ms] h-1/2" />
+                  </div>
                 )}
-                
+              </div>
+
+              <div className="flex items-center justify-between sm:justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 dark:border-slate-800">
+                <div className="flex items-center gap-1.5">
+                  {!isPlayingAudio ? (
+                    <button 
+                      onClick={() => startSpeech(`${selectedArticle.title}. ${selectedArticle.summary || ''}. ${selectedArticle.content || ''}`, selectedArticle)}
+                      className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 shadow-md shadow-red-500/20 active:scale-95 transition-all"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      <span>Dengarkan</span>
+                    </button>
+                  ) : isPausedAudio ? (
+                    <button 
+                      onClick={resumeSpeech}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      <span>Lanjutkan</span>
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={pauseSpeech}
+                      className="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+                    >
+                      <Pause className="w-3.5 h-3.5" />
+                      <span>Jeda</span>
+                    </button>
+                  )}
+
+                  {isPlayingAudio && (
+                    <button 
+                      onClick={stopSpeech}
+                      className="bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-red-500 hover:text-white text-xs font-bold px-2.5 py-1.5 rounded-xl flex items-center gap-1 transition-colors"
+                      title="Hentikan Audio"
+                    >
+                      <VolumeX className="w-3.5 h-3.5" />
+                      <span>Stop</span>
+                    </button>
+                  )}
+
+                  {/* Speech Rate buttons */}
+                  <div className="flex items-center bg-slate-200/70 dark:bg-slate-800 rounded-xl p-0.5 ml-0.5">
+                    {[0.8, 1.0, 1.2, 1.5].map(rate => (
+                      <button
+                        key={rate}
+                        onClick={() => changeSpeechRate(rate)}
+                        className={`px-1.5 py-0.5 text-[10px] font-extrabold rounded-lg transition-all ${
+                          speechRate === rate 
+                            ? 'bg-red-600 text-white shadow-xs' 
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                      >
+                        {rate}x
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Font control buttons */}
-                <span className="w-px h-4 bg-slate-300 dark:bg-slate-700 mx-1" />
-                <button 
-                  onClick={() => setReaderFontSize(p => Math.max(12, p - 2))}
-                  className="p-1.5 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg"
-                  title="Perkecil Tulisan"
-                >
-                  <ZoomOut className="w-3.5 h-3.5" />
-                </button>
-                <button 
-                  onClick={() => setReaderFontSize(p => Math.min(24, p + 2))}
-                  className="p-1.5 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg"
-                  title="Perbesar Tulisan"
-                >
-                  <ZoomIn className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-1 pl-1.5 border-l border-slate-300 dark:border-slate-700">
+                  <button 
+                    onClick={() => setReaderFontSize(p => Math.max(12, p - 2))}
+                    className="p-1.5 bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors"
+                    title="Perkecil Tulisan"
+                  >
+                    <ZoomOut className="w-3.5 h-3.5" />
+                  </button>
+                  <button 
+                    onClick={() => setReaderFontSize(p => Math.min(24, p + 2))}
+                    className="p-1.5 bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors"
+                    title="Perbesar Tulisan"
+                  >
+                    <ZoomIn className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -2812,6 +2948,88 @@ export default function MobilePremiumApp({
               </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Audio TTS Bar */}
+      <AnimatePresence>
+        {isPlayingAudio && (
+          <motion.div
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 50, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className="fixed bottom-[74px] left-3 right-3 max-w-md mx-auto z-40 bg-slate-900/95 dark:bg-slate-900/95 backdrop-blur-md text-white rounded-2xl p-3 shadow-2xl border border-slate-700/60 flex items-center justify-between gap-2.5"
+          >
+            <div 
+              onClick={() => {
+                if (currentlySpeakingArticle) {
+                  onSelectArticle(currentlySpeakingArticle);
+                }
+              }}
+              className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer group"
+            >
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all ${isPausedAudio ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400 animate-pulse'}`}>
+                <Volume2 className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-red-400">Audio Reader TTS</span>
+                  {!isPausedAudio && (
+                    <span className="flex items-end gap-0.5 h-2.5 px-1">
+                      <span className="w-0.5 bg-red-400 rounded-full animate-[bounce_1s_infinite_100ms] h-full" />
+                      <span className="w-0.5 bg-red-400 rounded-full animate-[bounce_1s_infinite_300ms] h-2/3" />
+                      <span className="w-0.5 bg-red-400 rounded-full animate-[bounce_1s_infinite_200ms] h-5/6" />
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs font-bold text-slate-100 truncate group-hover:text-red-300 transition-colors">
+                  {currentlySpeakingTitle || "Membaca Berita..."}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0">
+              {/* Speed rate toggle button */}
+              <button
+                onClick={() => {
+                  const rates = [0.8, 1.0, 1.2, 1.5];
+                  const nextIndex = (rates.indexOf(speechRate) + 1) % rates.length;
+                  changeSpeechRate(rates[nextIndex]);
+                }}
+                className="px-2 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[10px] font-extrabold rounded-lg text-slate-200 transition-colors"
+                title="Kecepatan Suara"
+              >
+                {speechRate}x
+              </button>
+
+              {isPausedAudio ? (
+                <button
+                  onClick={resumeSpeech}
+                  className="w-8 h-8 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-md active:scale-95 transition-transform"
+                  title="Lanjutkan Suara"
+                >
+                  <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                </button>
+              ) : (
+                <button
+                  onClick={pauseSpeech}
+                  className="w-8 h-8 rounded-xl bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center shadow-md active:scale-95 transition-transform"
+                  title="Jeda Suara"
+                >
+                  <Pause className="w-3.5 h-3.5" />
+                </button>
+              )}
+
+              <button
+                onClick={stopSpeech}
+                className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-red-500 text-slate-300 hover:text-white flex items-center justify-center border border-slate-700 transition-colors"
+                title="Hentikan Audio"
+              >
+                <VolumeX className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
