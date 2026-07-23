@@ -697,6 +697,7 @@ export default function MobilePremiumApp({
   const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
   const [isPausedAudio, setIsPausedAudio] = useState<boolean>(false);
   const [speechRate, setSpeechRate] = useState<number>(1.0);
+  const [speechProgress, setSpeechProgress] = useState<number>(0);
   const [currentlySpeakingTitle, setCurrentlySpeakingTitle] = useState<string>("");
   const [currentlySpeakingArticle, setCurrentlySpeakingArticle] = useState<Article | null>(null);
   const [audioSpeechInstance, setAudioSpeechInstance] = useState<SpeechSynthesisUtterance | null>(null);
@@ -937,6 +938,7 @@ export default function MobilePremiumApp({
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
       setIsPausedAudio(false);
+      setSpeechProgress(0);
 
       const cleanText = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
       if (!cleanText) return;
@@ -952,17 +954,30 @@ export default function MobilePremiumApp({
         u.voice = idVoice;
       }
 
+      // Track speech boundary for exact word progress
+      u.onboundary = (event) => {
+        if (cleanText.length > 0 && event.charIndex !== undefined) {
+          const pct = Math.min(100, Math.max(0, Math.round((event.charIndex / cleanText.length) * 100)));
+          setSpeechProgress(pct);
+        }
+      };
+
       u.onend = () => {
-        setIsPlayingAudio(false);
-        setIsPausedAudio(false);
-        setCurrentlySpeakingTitle("");
-        setCurrentlySpeakingArticle(null);
+        setSpeechProgress(100);
+        setTimeout(() => {
+          setIsPlayingAudio(false);
+          setIsPausedAudio(false);
+          setCurrentlySpeakingTitle("");
+          setCurrentlySpeakingArticle(null);
+          setSpeechProgress(0);
+        }, 800);
       };
       u.onerror = () => {
         setIsPlayingAudio(false);
         setIsPausedAudio(false);
         setCurrentlySpeakingTitle("");
         setCurrentlySpeakingArticle(null);
+        setSpeechProgress(0);
       };
 
       window.speechSynthesis.speak(u);
@@ -979,6 +994,17 @@ export default function MobilePremiumApp({
       alert("Browser Anda tidak mendukung Text-to-Speech.");
     }
   };
+
+  // Smooth fallback progress timer while speech is playing
+  useEffect(() => {
+    let interval: any;
+    if (isPlayingAudio && !isPausedAudio && speechProgress < 98) {
+      interval = setInterval(() => {
+        setSpeechProgress(prev => Math.min(98, prev + 0.6));
+      }, 250);
+    }
+    return () => clearInterval(interval);
+  }, [isPlayingAudio, isPausedAudio, speechProgress]);
 
   const pauseSpeech = () => {
     if ("speechSynthesis" in window) {
@@ -1004,11 +1030,12 @@ export default function MobilePremiumApp({
   const stopSpeech = () => {
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
-      setIsPlayingAudio(false);
-      setIsPausedAudio(false);
-      setCurrentlySpeakingTitle("");
-      setCurrentlySpeakingArticle(null);
     }
+    setIsPlayingAudio(false);
+    setIsPausedAudio(false);
+    setSpeechProgress(0);
+    setCurrentlySpeakingTitle("");
+    setCurrentlySpeakingArticle(null);
   };
 
   const changeSpeechRate = (rate: number) => {
@@ -1396,107 +1423,130 @@ export default function MobilePremiumApp({
             </div>
 
             {/* Read / Listen Text-to-Speech bar */}
-            <div className="bg-slate-100 dark:bg-slate-900 rounded-2xl p-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-5 border border-slate-200/60 dark:border-slate-800 shadow-sm">
-              <div className="flex items-center justify-between sm:justify-start gap-2.5">
-                <div className="flex items-center gap-2">
-                  <div className={`p-2 rounded-xl transition-colors ${isPlayingAudio && !isPausedAudio ? 'bg-red-500 text-white animate-pulse' : 'bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400'}`}>
-                    <Volume2 className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-black text-slate-800 dark:text-slate-200">Audio Reader</span>
-                      <span className="text-[9px] bg-red-600 text-white font-extrabold px-1.5 py-0.2 rounded-full uppercase tracking-wider">TTS AI</span>
+            <div className="bg-slate-100 dark:bg-slate-900 rounded-2xl p-3 flex flex-col items-stretch gap-3 mb-5 border border-slate-200/60 dark:border-slate-800 shadow-sm">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <div className="flex items-center justify-between sm:justify-start gap-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className={`p-2 rounded-xl transition-colors ${isPlayingAudio && !isPausedAudio ? 'bg-red-500 text-white animate-pulse' : 'bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400'}`}>
+                      <Volume2 className="w-4 h-4" />
                     </div>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400">Dengarkan berita secara otomatis</p>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-black text-slate-800 dark:text-slate-200">Audio Reader</span>
+                        <span className="text-[9px] bg-red-600 text-white font-extrabold px-1.5 py-0.2 rounded-full uppercase tracking-wider">TTS AI</span>
+                        {isPlayingAudio && (
+                          <span className="text-[10px] font-extrabold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-950/80 px-1.5 py-0.2 rounded-md">
+                            {speechProgress}%
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400">Dengarkan berita secara otomatis</p>
+                    </div>
                   </div>
+
+                  {/* Animated Sound Equalizer */}
+                  {isPlayingAudio && !isPausedAudio && (
+                    <div className="flex items-end gap-0.5 h-4 px-1.5">
+                      <span className="w-0.5 bg-red-500 rounded-full animate-[bounce_1s_infinite_100ms] h-full" />
+                      <span className="w-0.5 bg-red-500 rounded-full animate-[bounce_1s_infinite_300ms] h-2/3" />
+                      <span className="w-0.5 bg-red-500 rounded-full animate-[bounce_1s_infinite_200ms] h-5/6" />
+                      <span className="w-0.5 bg-red-500 rounded-full animate-[bounce_1s_infinite_400ms] h-1/2" />
+                    </div>
+                  )}
                 </div>
 
-                {/* Animated Sound Equalizer */}
-                {isPlayingAudio && !isPausedAudio && (
-                  <div className="flex items-end gap-0.5 h-4 px-1.5">
-                    <span className="w-0.5 bg-red-500 rounded-full animate-[bounce_1s_infinite_100ms] h-full" />
-                    <span className="w-0.5 bg-red-500 rounded-full animate-[bounce_1s_infinite_300ms] h-2/3" />
-                    <span className="w-0.5 bg-red-500 rounded-full animate-[bounce_1s_infinite_200ms] h-5/6" />
-                    <span className="w-0.5 bg-red-500 rounded-full animate-[bounce_1s_infinite_400ms] h-1/2" />
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between sm:justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 dark:border-slate-800">
-                <div className="flex items-center gap-1.5">
-                  {!isPlayingAudio ? (
-                    <button 
-                      onClick={() => startSpeech(`${selectedArticle.title}. ${selectedArticle.summary || ''}. ${selectedArticle.content || ''}`, selectedArticle)}
-                      className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 shadow-md shadow-red-500/20 active:scale-95 transition-all"
-                    >
-                      <Play className="w-3.5 h-3.5 fill-current" />
-                      <span>Dengarkan</span>
-                    </button>
-                  ) : isPausedAudio ? (
-                    <button 
-                      onClick={resumeSpeech}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
-                    >
-                      <Play className="w-3.5 h-3.5 fill-current" />
-                      <span>Lanjutkan</span>
-                    </button>
-                  ) : (
-                    <button 
-                      onClick={pauseSpeech}
-                      className="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
-                    >
-                      <Pause className="w-3.5 h-3.5" />
-                      <span>Jeda</span>
-                    </button>
-                  )}
-
-                  {isPlayingAudio && (
-                    <button 
-                      onClick={stopSpeech}
-                      className="bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-red-500 hover:text-white text-xs font-bold px-2.5 py-1.5 rounded-xl flex items-center gap-1 transition-colors"
-                      title="Hentikan Audio"
-                    >
-                      <VolumeX className="w-3.5 h-3.5" />
-                      <span>Stop</span>
-                    </button>
-                  )}
-
-                  {/* Speech Rate buttons */}
-                  <div className="flex items-center bg-slate-200/70 dark:bg-slate-800 rounded-xl p-0.5 ml-0.5">
-                    {[0.5, 1.0, 1.5, 2.0].map(rate => (
-                      <button
-                        key={rate}
-                        onClick={() => changeSpeechRate(rate)}
-                        className={`px-1.5 py-0.5 text-[10px] font-extrabold rounded-lg transition-all ${
-                          speechRate === rate 
-                            ? 'bg-red-600 text-white shadow-xs' 
-                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                        }`}
+                <div className="flex items-center justify-between sm:justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 dark:border-slate-800">
+                  <div className="flex items-center gap-1.5">
+                    {!isPlayingAudio ? (
+                      <button 
+                        onClick={() => startSpeech(`${selectedArticle.title}. ${selectedArticle.summary || ''}. ${selectedArticle.content || ''}`, selectedArticle)}
+                        className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 shadow-md shadow-red-500/20 active:scale-95 transition-all"
                       >
-                        {rate}x
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                        <span>Dengarkan</span>
                       </button>
-                    ))}
+                    ) : isPausedAudio ? (
+                      <button 
+                        onClick={resumeSpeech}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+                      >
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                        <span>Lanjutkan</span>
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={pauseSpeech}
+                        className="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+                      >
+                        <Pause className="w-3.5 h-3.5" />
+                        <span>Jeda</span>
+                      </button>
+                    )}
+
+                    {isPlayingAudio && (
+                      <button 
+                        onClick={stopSpeech}
+                        className="bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-red-500 hover:text-white text-xs font-bold px-2.5 py-1.5 rounded-xl flex items-center gap-1 transition-colors"
+                        title="Hentikan Audio"
+                      >
+                        <VolumeX className="w-3.5 h-3.5" />
+                        <span>Stop</span>
+                      </button>
+                    )}
+
+                    {/* Speech Rate buttons */}
+                    <div className="flex items-center bg-slate-200/70 dark:bg-slate-800 rounded-xl p-0.5 ml-0.5">
+                      {[0.5, 1.0, 1.5, 2.0].map(rate => (
+                        <button
+                          key={rate}
+                          onClick={() => changeSpeechRate(rate)}
+                          className={`px-1.5 py-0.5 text-[10px] font-extrabold rounded-lg transition-all ${
+                            speechRate === rate 
+                              ? 'bg-red-600 text-white shadow-xs' 
+                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                          }`}
+                        >
+                          {rate}x
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Font control buttons */}
+                  <div className="flex items-center gap-1 pl-1.5 border-l border-slate-300 dark:border-slate-700">
+                    <button 
+                      onClick={() => setReaderFontSize(p => Math.max(12, p - 2))}
+                      className="p-1.5 bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors"
+                      title="Perkecil Tulisan"
+                    >
+                      <ZoomOut className="w-3.5 h-3.5" />
+                    </button>
+                    <button 
+                      onClick={() => setReaderFontSize(p => Math.min(24, p + 2))}
+                      className="p-1.5 bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors"
+                      title="Perbesar Tulisan"
+                    >
+                      <ZoomIn className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
-
-                {/* Font control buttons */}
-                <div className="flex items-center gap-1 pl-1.5 border-l border-slate-300 dark:border-slate-700">
-                  <button 
-                    onClick={() => setReaderFontSize(p => Math.max(12, p - 2))}
-                    className="p-1.5 bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors"
-                    title="Perkecil Tulisan"
-                  >
-                    <ZoomOut className="w-3.5 h-3.5" />
-                  </button>
-                  <button 
-                    onClick={() => setReaderFontSize(p => Math.min(24, p + 2))}
-                    className="p-1.5 bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg transition-colors"
-                    title="Perbesar Tulisan"
-                  >
-                    <ZoomIn className="w-3.5 h-3.5" />
-                  </button>
-                </div>
               </div>
+
+              {/* Progress Bar Component */}
+              {isPlayingAudio && (
+                <div className="w-full pt-1">
+                  <div className="flex items-center justify-between text-[10px] font-extrabold text-slate-500 dark:text-slate-400 mb-1">
+                    <span>Kemajuan Audio Reading</span>
+                    <span className="text-red-600 dark:text-red-400 font-extrabold">{speechProgress}%</span>
+                  </div>
+                  <div className="w-full bg-slate-200/80 dark:bg-slate-800 h-2 rounded-full overflow-hidden p-0.5 shadow-inner">
+                    <div 
+                      className="bg-gradient-to-r from-red-600 via-rose-500 to-amber-500 h-full rounded-full transition-all duration-300 shadow-sm"
+                      style={{ width: `${speechProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Article Metadata */}
@@ -2959,75 +3009,88 @@ export default function MobilePremiumApp({
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 50, opacity: 0 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="fixed bottom-[74px] left-3 right-3 max-w-md mx-auto z-40 bg-slate-900/95 dark:bg-slate-900/95 backdrop-blur-md text-white rounded-2xl p-3 shadow-2xl border border-slate-700/60 flex items-center justify-between gap-2.5"
+            className="fixed bottom-[74px] left-3 right-3 max-w-md mx-auto z-40 bg-slate-900/95 dark:bg-slate-900/95 backdrop-blur-md text-white rounded-2xl p-3 pt-3.5 shadow-2xl border border-slate-700/60 flex flex-col gap-2 overflow-hidden"
           >
-            <div 
-              onClick={() => {
-                if (currentlySpeakingArticle) {
-                  onSelectArticle(currentlySpeakingArticle);
-                }
-              }}
-              className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer group"
-            >
-              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all ${isPausedAudio ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400 animate-pulse'}`}>
-                <Volume2 className="w-4 h-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-red-400">Audio Reader TTS</span>
-                  {!isPausedAudio && (
-                    <span className="flex items-end gap-0.5 h-2.5 px-1">
-                      <span className="w-0.5 bg-red-400 rounded-full animate-[bounce_1s_infinite_100ms] h-full" />
-                      <span className="w-0.5 bg-red-400 rounded-full animate-[bounce_1s_infinite_300ms] h-2/3" />
-                      <span className="w-0.5 bg-red-400 rounded-full animate-[bounce_1s_infinite_200ms] h-5/6" />
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs font-bold text-slate-100 truncate group-hover:text-red-300 transition-colors">
-                  {currentlySpeakingTitle || "Membaca Berita..."}
-                </p>
-              </div>
+            {/* Top progress bar line */}
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-slate-800/80 overflow-hidden rounded-t-2xl">
+              <div 
+                className="bg-gradient-to-r from-red-500 via-rose-500 to-amber-400 h-full transition-all duration-300 shadow-sm"
+                style={{ width: `${speechProgress}%` }}
+              />
             </div>
 
-            <div className="flex items-center gap-1 shrink-0">
-              {/* Speed rate toggle button */}
-              <button
+            <div className="flex items-center justify-between gap-2.5">
+              <div 
                 onClick={() => {
-                  const rates = [0.5, 1.0, 1.5, 2.0];
-                  const nextIndex = (rates.indexOf(speechRate) + 1) % rates.length;
-                  changeSpeechRate(rates[nextIndex]);
+                  if (currentlySpeakingArticle) {
+                    onSelectArticle(currentlySpeakingArticle);
+                  }
                 }}
-                className="px-2 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[10px] font-extrabold rounded-lg text-slate-200 transition-colors"
-                title="Kecepatan Suara"
+                className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer group"
               >
-                {speechRate}x
-              </button>
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all ${isPausedAudio ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400 animate-pulse'}`}>
+                  <Volume2 className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[9px] font-black uppercase tracking-wider text-red-400">Audio Reader TTS</span>
+                    <span className="text-[9px] font-extrabold text-amber-300 bg-amber-500/20 px-1.5 py-0.2 rounded-md border border-amber-500/30">
+                      {speechProgress}%
+                    </span>
+                    {!isPausedAudio && (
+                      <span className="flex items-end gap-0.5 h-2.5 px-1">
+                        <span className="w-0.5 bg-red-400 rounded-full animate-[bounce_1s_infinite_100ms] h-full" />
+                        <span className="w-0.5 bg-red-400 rounded-full animate-[bounce_1s_infinite_300ms] h-2/3" />
+                        <span className="w-0.5 bg-red-400 rounded-full animate-[bounce_1s_infinite_200ms] h-5/6" />
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs font-bold text-slate-100 truncate group-hover:text-red-300 transition-colors">
+                    {currentlySpeakingTitle || "Membaca Berita..."}
+                  </p>
+                </div>
+              </div>
 
-              {isPausedAudio ? (
+              <div className="flex items-center gap-1 shrink-0">
+                {/* Speed rate toggle button */}
                 <button
-                  onClick={resumeSpeech}
-                  className="w-8 h-8 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-md active:scale-95 transition-transform"
-                  title="Lanjutkan Suara"
+                  onClick={() => {
+                    const rates = [0.5, 1.0, 1.5, 2.0];
+                    const nextIndex = (rates.indexOf(speechRate) + 1) % rates.length;
+                    changeSpeechRate(rates[nextIndex]);
+                  }}
+                  className="px-2 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[10px] font-extrabold rounded-lg text-slate-200 transition-colors"
+                  title="Kecepatan Suara"
                 >
-                  <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                  {speechRate}x
                 </button>
-              ) : (
-                <button
-                  onClick={pauseSpeech}
-                  className="w-8 h-8 rounded-xl bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center shadow-md active:scale-95 transition-transform"
-                  title="Jeda Suara"
-                >
-                  <Pause className="w-3.5 h-3.5" />
-                </button>
-              )}
 
-              <button
-                onClick={stopSpeech}
-                className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-red-500 text-slate-300 hover:text-white flex items-center justify-center border border-slate-700 transition-colors"
-                title="Hentikan Audio"
-              >
-                <VolumeX className="w-3.5 h-3.5" />
-              </button>
+                {isPausedAudio ? (
+                  <button
+                    onClick={resumeSpeech}
+                    className="w-8 h-8 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-md active:scale-95 transition-transform"
+                    title="Lanjutkan Suara"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={pauseSpeech}
+                    className="w-8 h-8 rounded-xl bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center shadow-md active:scale-95 transition-transform"
+                    title="Jeda Suara"
+                  >
+                    <Pause className="w-3.5 h-3.5" />
+                  </button>
+                )}
+
+                <button
+                  onClick={stopSpeech}
+                  className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-red-500 text-slate-300 hover:text-white flex items-center justify-center border border-slate-700 transition-colors"
+                  title="Hentikan Audio"
+                >
+                  <VolumeX className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
