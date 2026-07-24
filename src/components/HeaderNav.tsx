@@ -74,7 +74,7 @@ export default function HeaderNav({
           <div className="flex flex-col cursor-pointer select-none shrink-0" onClick={() => onSelectCategory("")}>
             <div className="flex items-center gap-2">
               <img
-                src={logoImg}
+                src={logoImg || null}
                 className="w-10 h-10 object-contain rounded-full border-2 border-red-700 bg-white shadow-sm"
                 alt="Majalengka Post Logo"
                 referrerPolicy="no-referrer"
@@ -365,7 +365,7 @@ export default function HeaderNav({
             <div className="flex items-center justify-between mb-6 border-b border-slate-100 dark:border-slate-800 pb-4">
               <div className="flex items-center gap-2">
                 <img
-                  src={logoImg}
+                  src={logoImg || null}
                   className="w-8 h-8 object-contain rounded-full border border-red-700 bg-white shadow-sm"
                   alt="Logo"
                 />

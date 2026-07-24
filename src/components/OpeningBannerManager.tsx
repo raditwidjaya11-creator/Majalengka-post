@@ -271,7 +271,7 @@ export default function OpeningBannerManager({
                     {/* Thumbnail Image */}
                     <div className="relative aspect-[16/9] bg-gray-100 dark:bg-gray-800 overflow-hidden">
                       <img
-                        src={banner.imageUrl}
+                        src={banner.imageUrl || null}
                         alt={banner.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />

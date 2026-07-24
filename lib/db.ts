@@ -39,6 +39,17 @@ function safeJsonParse(val: any, fallback: any = null) {
   }
 }
 
+const dbMemoryCache: Record<string, { data: any; timestamp: number }> = {};
+const CACHE_TTL_MS = 60 * 1000; // 60 seconds in-memory cache for ultra-fast DB responses
+
+export function invalidateDbCache(key?: string) {
+  if (key) {
+    delete dbMemoryCache[key];
+  } else {
+    Object.keys(dbMemoryCache).forEach(k => delete dbMemoryCache[k]);
+  }
+}
+
 async function withTimeout<T>(promise: Promise<T> | any, timeoutMs: number): Promise<T> {
   let timeoutId: any;
   const timeoutPromise = new Promise<never>((_, reject) => {
@@ -158,6 +169,11 @@ export async function robustUpsert(
  */
 
 export async function fetchArticles() {
+  const cached = dbMemoryCache["articles"];
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data;
+  }
+
   const supabaseClient = getSupabaseClient();
   if (supabaseClient) {
     try {
@@ -166,10 +182,10 @@ export async function fetchArticles() {
         .select("*")
         .order("date", { ascending: false });
 
-      const { data, error } = await withTimeout<any>(fetchPromise, 4000);
+      const { data, error } = await withTimeout<any>(fetchPromise, 5000);
       
       if (!error && data && data.length > 0) {
-        return data.map((b: any) => {
+        const result = data.map((b: any) => {
           const item = normalizeObject(b, ARTICLE_MAPPINGS);
           const rawCover = item.coverImage !== undefined ? item.coverImage : (item.coverimage || "");
           const rawGallery = safeJsonParse(item.galleryImages, []);
@@ -210,11 +226,15 @@ export async function fetchArticles() {
             seo: safeJsonParse(item.seo, { title: "", description: "", keywords: "", canonicalUrl: "" })
           };
         });
+        dbMemoryCache["articles"] = { data: result, timestamp: Date.now() };
+        return result;
       }
-    } catch (err) {
-      console.error("Error fetching articles inside lib/db.ts:", err);
+    } catch (err: any) {
+      console.warn("Articles fetch timeout/fallback in lib/db.ts:", err?.message || err);
+      if (cached) return cached.data;
     }
   }
+  if (cached) return cached.data;
   return INITIAL_ARTICLES.map(a => ({
     ...a,
     coverImage: convertBase64ToUploadUrl(a.coverImage),
@@ -335,9 +355,11 @@ export async function upsertArticles(articles: any[]) {
   }));
 
   await robustUpsert("articles", { camel, lower, snake });
+  invalidateDbCache("articles");
 }
 
 export async function deleteArticle(id: string) {
+  invalidateDbCache("articles");
   const supabase = getSupabaseClient();
   if (!supabase) return;
   const { error } = await supabase.from("articles").delete().eq("id", id);
@@ -351,13 +373,18 @@ export async function deleteArticle(id: string) {
  */
 
 export async function fetchBanners() {
+  const cached = dbMemoryCache["banners"];
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data;
+  }
+
   const supabase = getSupabaseClient();
   if (supabase) {
     try {
       const fetchPromise = supabase.from("banners").select("*");
-      const { data, error } = await withTimeout<any>(fetchPromise, 4000);
+      const { data, error } = await withTimeout<any>(fetchPromise, 5000);
       if (!error && data && data.length > 0) {
-        return data.map((b: any) => {
+        const result = data.map((b: any) => {
           const item = normalizeObject(b, BANNER_MAPPINGS);
           return {
             id: item.id,
@@ -372,11 +399,15 @@ export async function fetchBanners() {
             active: item.active !== undefined ? !!item.active : true
           };
         });
+        dbMemoryCache["banners"] = { data: result, timestamp: Date.now() };
+        return result;
       }
-    } catch (err) {
-      console.error("Error fetching banners in lib/db.ts:", err);
+    } catch (err: any) {
+      console.warn("Banners fetch timeout/fallback in lib/db.ts:", err?.message || err);
+      if (cached) return cached.data;
     }
   }
+  if (cached) return cached.data;
   return INITIAL_BANNERS;
 }
 
@@ -421,9 +452,11 @@ export async function upsertBanners(banners: any[]) {
   }));
 
   await robustUpsert("banners", { camel, lower, snake });
+  invalidateDbCache("banners");
 }
 
 export async function deleteBanner(id: string) {
+  invalidateDbCache("banners");
   const supabase = getSupabaseClient();
   if (!supabase) return;
   const { error } = await supabase.from("banners").delete().eq("id", id);
@@ -437,13 +470,18 @@ export async function deleteBanner(id: string) {
  */
 
 export async function fetchOpeningBanners() {
+  const cached = dbMemoryCache["opening_banners"];
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data;
+  }
+
   const supabase = getSupabaseClient();
   if (supabase) {
     try {
       const fetchPromise = supabase.from("opening_banners").select("*").order("sort_order", { ascending: true });
-      const { data, error } = await withTimeout<any>(fetchPromise, 4000);
+      const { data, error } = await withTimeout<any>(fetchPromise, 5000);
       if (!error && data && data.length > 0) {
-        return data.map((b: any) => {
+        const result = data.map((b: any) => {
           const item = normalizeObject(b, OPENING_BANNER_MAPPINGS);
           return {
             id: item.id,
@@ -469,11 +507,15 @@ export async function fetchOpeningBanners() {
             updatedAt: item.updatedAt || item.updated_at || new Date().toISOString()
           };
         });
+        dbMemoryCache["opening_banners"] = { data: result, timestamp: Date.now() };
+        return result;
       }
-    } catch (err) {
-      console.error("Error fetching opening banners in lib/db.ts:", err);
+    } catch (err: any) {
+      console.warn("Opening banners fetch timeout/fallback in lib/db.ts:", err?.message || err);
+      if (cached) return cached.data;
     }
   }
+  if (cached) return cached.data;
   return INITIAL_OPENING_BANNERS;
 }
 
@@ -559,9 +601,11 @@ export async function upsertOpeningBanners(banners: any[]) {
   }));
 
   await robustUpsert("opening_banners", { camel, lower, snake, minimal });
+  invalidateDbCache("opening_banners");
 }
 
 export async function deleteOpeningBanner(id: string) {
+  invalidateDbCache("opening_banners");
   const supabase = getSupabaseClient();
   if (!supabase) return;
   const { error } = await supabase.from("opening_banners").delete().eq("id", id);
@@ -575,21 +619,30 @@ export async function deleteOpeningBanner(id: string) {
  */
 
 export async function fetchMediaItems() {
+  const cached = dbMemoryCache["media_items"];
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data;
+  }
+
   const supabase = getSupabaseClient();
   if (supabase) {
     try {
       const fetchPromise = supabase.from("media_items").select("*");
-      const { data, error } = await withTimeout<any>(fetchPromise, 4000);
+      const { data, error } = await withTimeout<any>(fetchPromise, 5000);
       if (!error && data && data.length > 0) {
-        return data.map((item: any) => ({
+        const result = data.map((item: any) => ({
           ...item,
           tags: safeJsonParse(item.tags, [])
         }));
+        dbMemoryCache["media_items"] = { data: result, timestamp: Date.now() };
+        return result;
       }
-    } catch (err) {
-      console.error("Error fetching media items in lib/db.ts:", err);
+    } catch (err: any) {
+      console.warn("Media items fetch timeout/fallback in lib/db.ts:", err?.message || err);
+      if (cached) return cached.data;
     }
   }
+  if (cached) return cached.data;
   return INITIAL_MEDIA_ITEMS;
 }
 
@@ -609,9 +662,11 @@ export async function upsertMediaItems(media: any[]) {
 
   const { error } = await supabase.from("media_items").upsert(payload, { onConflict: "id" });
   if (error) throw error;
+  invalidateDbCache("media_items");
 }
 
 export async function deleteMediaItem(id: string) {
+  invalidateDbCache("media_items");
   const supabase = getSupabaseClient();
   if (!supabase) return;
   const { error } = await supabase.from("media_items").delete().eq("id", id);
@@ -625,26 +680,35 @@ export async function deleteMediaItem(id: string) {
  */
 
 export async function fetchPoll() {
+  const cached = dbMemoryCache["polls"];
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data;
+  }
+
   const supabase = getSupabaseClient();
   if (supabase) {
     try {
       const fetchPromise = supabase.from("polls").select("*").eq("active", true).limit(1);
-      const { data, error } = await withTimeout<any>(fetchPromise, 4000);
+      const { data, error } = await withTimeout<any>(fetchPromise, 5000);
       if (!error && data && data.length > 0) {
         const b = data[0];
         const poll = normalizeObject(b, POLL_MAPPINGS);
-        return {
+        const result = {
           id: poll.id,
           question: poll.question,
           options: safeJsonParse(poll.options, []),
           totalVotes: Number(poll.totalVotes || 0),
           active: !!poll.active
         };
+        dbMemoryCache["polls"] = { data: result, timestamp: Date.now() };
+        return result;
       }
-    } catch (err) {
-      console.error("Error fetching poll in lib/db.ts:", err);
+    } catch (err: any) {
+      console.warn("Poll fetch timeout/fallback in lib/db.ts:", err?.message || err);
+      if (cached) return cached.data;
     }
   }
+  if (cached) return cached.data;
   return INITIAL_POLL;
 }
 
@@ -674,6 +738,7 @@ export async function upsertPoll(poll: any) {
   };
 
   await robustUpsert("polls", { camel, lower, snake });
+  invalidateDbCache("polls");
 }
 
 /**
@@ -683,23 +748,32 @@ export async function upsertPoll(poll: any) {
  */
 
 export async function fetchCompanyProfiles() {
+  const cached = dbMemoryCache["company_info"];
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data;
+  }
+
   const supabase = getSupabaseClient();
   if (supabase) {
     try {
       const fetchPromise = supabase.from("company_info").select("*");
-      const { data, error } = await withTimeout<any>(fetchPromise, 4000);
+      const { data, error } = await withTimeout<any>(fetchPromise, 5000);
       if (!error && data && data.length > 0) {
-        return data.map((b: any) => ({
+        const result = data.map((b: any) => ({
           id: b.id,
           title: b.title,
           content: b.content,
           lastUpdated: b.last_updated || b.lastupdated || b.lastUpdated || new Date().toISOString()
         }));
+        dbMemoryCache["company_info"] = { data: result, timestamp: Date.now() };
+        return result;
       }
-    } catch (err) {
-      console.error("Error fetching company profiles in lib/db.ts:", err);
+    } catch (err: any) {
+      console.warn("Company profiles fetch timeout/fallback in lib/db.ts:", err?.message || err);
+      if (cached) return cached.data;
     }
   }
+  if (cached) return cached.data;
   return DEFAULT_COMPANY_PROFILES;
 }
 
@@ -726,6 +800,7 @@ export async function upsertCompanyProfile(profile: any) {
   };
 
   await robustUpsert("company_info", { camel, lower, snake });
+  invalidateDbCache("company_info");
 }
 
 /**
@@ -735,23 +810,32 @@ export async function upsertCompanyProfile(profile: any) {
  */
 
 export async function fetchValasRates() {
+  const cached = dbMemoryCache["valas_rates"];
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data;
+  }
+
   const supabase = getSupabaseClient();
   if (supabase) {
     try {
       const fetchPromise = supabase.from("valas_rates").select("*");
-      const { data, error } = await withTimeout<any>(fetchPromise, 4000);
+      const { data, error } = await withTimeout<any>(fetchPromise, 5000);
       if (!error && data && data.length > 0) {
-        return data.map((b: any) => ({
+        const result = data.map((b: any) => ({
           code: b.code,
           rate: b.rate,
           change: b.change,
           updatedAt: b.updated_at || b.updatedAt || new Date().toISOString()
         }));
+        dbMemoryCache["valas_rates"] = { data: result, timestamp: Date.now() };
+        return result;
       }
-    } catch (err) {
-      console.error("Error fetching valas rates in lib/db.ts:", err);
+    } catch (err: any) {
+      console.warn("Valas rates fetch timeout/fallback in lib/db.ts:", err?.message || err);
+      if (cached) return cached.data;
     }
   }
+  if (cached) return cached.data;
   return null;
 }
 
@@ -768,4 +852,5 @@ export async function upsertValasRates(rates: any[]) {
 
   const { error } = await supabase.from("valas_rates").upsert(payload, { onConflict: "code" });
   if (error) throw error;
+  invalidateDbCache("valas_rates");
 }

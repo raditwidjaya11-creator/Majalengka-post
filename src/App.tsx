@@ -916,116 +916,131 @@ export default function App() {
           return;
         }
 
-        // 1. Fetch articles
-        let fetchedArticles: Article[] = [];
-        try {
-          fetchedArticles = await fetchArticlesFromSupabase();
+        // Fetch all data categories simultaneously in parallel for maximum speed
+        const [
+          articlesResult,
+          bannersResult,
+          openingResult,
+          mediaResult,
+          pollResult,
+          companyResult
+        ] = await Promise.allSettled([
+          fetchArticlesFromSupabase(),
+          fetchBannersFromSupabase(),
+          fetchOpeningBannersFromSupabase(),
+          fetchMediaFromSupabase(),
+          fetchPollFromSupabase(),
+          fetchCompanyInfoFromSupabase()
+        ]);
+
+        // 1. Process Articles
+        if (articlesResult.status === "fulfilled") {
+          let fetchedArticles = articlesResult.value;
           if (fetchedArticles.length === 0) {
-            // Seed database
-            await upsertArticlesToSupabase(INITIAL_ARTICLES).catch(() => {});
+            upsertArticlesToSupabase(INITIAL_ARTICLES).catch(() => {});
             fetchedArticles = INITIAL_ARTICLES;
           }
           setArticles(fetchedArticles);
-        } catch (err: any) {
+          safeLocalStorage.setItem("kabarnegara_articles", JSON.stringify(fetchedArticles));
+        } else {
+          const err = articlesResult.reason;
           if (isTableMissingError(err)) {
             setSupabaseStatus("missing_tables");
-            setSupabaseErrorMsg(err.message || "Tabel 'articles' belum terbuat.");
+            setSupabaseErrorMsg(err?.message || "Tabel 'articles' belum terbuat.");
             return;
           }
           console.warn("Using offline articles fallback:", err?.message || err);
-          setArticles(INITIAL_ARTICLES);
         }
 
-        // 2. Fetch banners
-        let fetchedBanners: AdBanner[] = [];
-        try {
-          fetchedBanners = await fetchBannersFromSupabase();
+        // 2. Process Banners
+        if (bannersResult.status === "fulfilled") {
+          let fetchedBanners = bannersResult.value;
           if (fetchedBanners.length === 0) {
-            await upsertBannersToSupabase(INITIAL_BANNERS).catch(() => {});
+            upsertBannersToSupabase(INITIAL_BANNERS).catch(() => {});
             fetchedBanners = INITIAL_BANNERS;
           }
           setBanners(fetchedBanners);
-        } catch (err: any) {
+          safeLocalStorage.setItem("kabarnegara_banners", JSON.stringify(fetchedBanners));
+        } else {
+          const err = bannersResult.reason;
           if (isTableMissingError(err)) {
             setSupabaseStatus("missing_tables");
-            setSupabaseErrorMsg(err.message || "Tabel 'banners' belum terbuat.");
+            setSupabaseErrorMsg(err?.message || "Tabel 'banners' belum terbuat.");
             return;
           }
           console.warn("Using offline banners fallback:", err?.message || err);
-          setBanners(INITIAL_BANNERS);
         }
 
-        // 2b. Fetch opening banners (splash promo)
-        try {
-          const fetchedOpening = await fetchOpeningBannersFromSupabase();
+        // 2b. Process Opening Banners
+        if (openingResult.status === "fulfilled") {
+          let fetchedOpening = openingResult.value;
           if (fetchedOpening.length === 0) {
-            await upsertOpeningBannersToSupabase(INITIAL_OPENING_BANNERS).catch(() => {});
-            setOpeningBanners(INITIAL_OPENING_BANNERS);
-          } else {
-            setOpeningBanners(fetchedOpening);
+            upsertOpeningBannersToSupabase(INITIAL_OPENING_BANNERS).catch(() => {});
+            fetchedOpening = INITIAL_OPENING_BANNERS;
           }
-        } catch (err: any) {
-          console.warn("Using offline opening banners fallback:", err?.message || err);
-          setOpeningBanners(INITIAL_OPENING_BANNERS);
+          setOpeningBanners(fetchedOpening);
+          safeLocalStorage.setItem("majalengkapost_opening_banners", JSON.stringify(fetchedOpening));
+        } else {
+          console.warn("Using offline opening banners fallback:", openingResult.reason?.message || openingResult.reason);
         }
 
-        // 3. Fetch media items
-        let fetchedMedia: MediaItem[] = [];
-        try {
-          fetchedMedia = await fetchMediaFromSupabase();
+        // 3. Process Media
+        if (mediaResult.status === "fulfilled") {
+          let fetchedMedia = mediaResult.value;
           if (fetchedMedia.length === 0) {
-            await upsertMediaToSupabase(INITIAL_MEDIA_ITEMS).catch(() => {});
+            upsertMediaToSupabase(INITIAL_MEDIA_ITEMS).catch(() => {});
             fetchedMedia = INITIAL_MEDIA_ITEMS;
           }
           setMediaItems(fetchedMedia);
-        } catch (err: any) {
+          safeLocalStorage.setItem("majalengkapost_media", JSON.stringify(fetchedMedia));
+        } else {
+          const err = mediaResult.reason;
           if (isTableMissingError(err)) {
             setSupabaseStatus("missing_tables");
-            setSupabaseErrorMsg(err.message || "Tabel 'media_items' belum terbuat.");
+            setSupabaseErrorMsg(err?.message || "Tabel 'media_items' belum terbuat.");
             return;
           }
           console.warn("Using offline media fallback:", err?.message || err);
-          setMediaItems(INITIAL_MEDIA_ITEMS);
         }
 
-        // 4. Fetch poll
-        try {
-          const fetchedPoll = await fetchPollFromSupabase();
+        // 4. Process Poll
+        if (pollResult.status === "fulfilled") {
+          let fetchedPoll = pollResult.value;
           if (!fetchedPoll) {
-            await upsertPollToSupabase(INITIAL_POLL).catch(() => {});
-            setActivePoll(INITIAL_POLL);
-          } else {
-            setActivePoll(fetchedPoll);
+            upsertPollToSupabase(INITIAL_POLL).catch(() => {});
+            fetchedPoll = INITIAL_POLL;
           }
-        } catch (err: any) {
+          setActivePoll(fetchedPoll);
+          safeLocalStorage.setItem("majalengkapost_poll", JSON.stringify(fetchedPoll));
+        } else {
+          const err = pollResult.reason;
           if (isTableMissingError(err)) {
             setSupabaseStatus("missing_tables");
-            setSupabaseErrorMsg(err.message || "Tabel 'polls' belum terbuat.");
+            setSupabaseErrorMsg(err?.message || "Tabel 'polls' belum terbuat.");
             return;
           }
           console.warn("Using offline poll fallback:", err?.message || err);
-          setActivePoll(INITIAL_POLL);
         }
 
-        // 5. Fetch company profiles
-        try {
-          let fetchedProfiles = await fetchCompanyInfoFromSupabase();
+        // 5. Process Company Profiles
+        if (companyResult.status === "fulfilled") {
+          let fetchedProfiles = companyResult.value;
           if (fetchedProfiles.length === 0) {
-            // Seed database
             for (const profile of DEFAULT_COMPANY_PROFILES) {
-              await upsertCompanyInfoItemToSupabase(profile).catch(() => {});
+              upsertCompanyInfoItemToSupabase(profile).catch(() => {});
             }
             fetchedProfiles = DEFAULT_COMPANY_PROFILES;
           }
           setCompanyProfiles(fetchedProfiles);
-        } catch (err: any) {
+          safeLocalStorage.setItem("majalengkapost_company_profiles", JSON.stringify(fetchedProfiles));
+        } else {
+          const err = companyResult.reason;
           if (isTableMissingError(err)) {
             setSupabaseStatus("missing_tables");
-            setSupabaseErrorMsg(err.message || "Tabel 'company_info' belum terbuat.");
+            setSupabaseErrorMsg(err?.message || "Tabel 'company_info' belum terbuat.");
             return;
           }
           console.warn("Using offline company info fallback:", err?.message || err);
-          setCompanyProfiles(DEFAULT_COMPANY_PROFILES);
         }
 
         setSupabaseStatus("success");
@@ -2159,7 +2174,7 @@ export default function App() {
                   <div ref={playerContainerRef} className="relative aspect-video w-full bg-black rounded-2xl overflow-hidden border border-slate-800 shadow-lg group">
                     {liveStreamType === "youtube" ? (
                       <iframe
-                        src={getYouTubeEmbedUrl(liveStreamUrl, true)}
+                        src={getYouTubeEmbedUrl(liveStreamUrl, true) || null}
                         title={liveStreamTitle}
                         className="w-full h-full border-0 absolute inset-0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -2168,7 +2183,7 @@ export default function App() {
                     ) : liveStreamType === "camera" ? (
                       activeCameraFrame ? (
                         <img
-                          src={activeCameraFrame}
+                          src={activeCameraFrame || null}
                           alt="Live Stream Feed"
                           className="w-full h-full object-cover transform -scale-x-100 absolute inset-0"
                         />
@@ -2188,10 +2203,10 @@ export default function App() {
                           </div>
                         </div>
                       )
-                    ) : (
+                    ) : liveStreamUrl ? (
                       // Custom direct video source (MP4 / HLS / WebM)
                       <video
-                        src={liveStreamUrl}
+                        src={liveStreamUrl || null}
                         controls
                         autoPlay
                         muted
@@ -2199,6 +2214,20 @@ export default function App() {
                         playsInline
                         className="w-full h-full object-contain absolute inset-0 bg-slate-950"
                       />
+                    ) : (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center space-y-4 bg-slate-950">
+                        <div className="relative">
+                          <div className="absolute -inset-1.5 bg-red-600 rounded-full blur opacity-40 animate-pulse"></div>
+                          <div className="relative w-16 h-16 rounded-full bg-slate-900 border border-red-600 flex items-center justify-center shadow-inner">
+                            <Tv className="w-7 h-7 text-red-500 animate-pulse" />
+                          </div>
+                        </div>
+
+                        <div className="text-center px-4">
+                          <p className="text-[10px] font-black tracking-[0.25em] text-red-500 uppercase">MAJALENGKA POST TV</p>
+                          <p className="text-xs font-bold text-slate-300 mt-2">Transmisi belum dimulai...</p>
+                        </div>
+                      </div>
                     )}
 
                     {/* Floating Reactions Overlay (Conditional) */}

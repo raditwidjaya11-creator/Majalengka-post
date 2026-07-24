@@ -152,7 +152,7 @@ export default function ArticlePreviewModal({
                 {/* Cover Image */}
                 {article.coverImage && (
                   <figure className="rounded-xl overflow-hidden shadow-sm">
-                    <img src={article.coverImage} alt={article.title} className="w-full h-auto object-cover max-h-[400px]" />
+                    <img src={article.coverImage || null} alt={article.title} className="w-full h-auto object-cover max-h-[400px]" />
                   </figure>
                 )}
 
@@ -179,7 +179,7 @@ export default function ArticlePreviewModal({
                 <p className="text-xs text-gray-500">{formattedDate} • {article.time} WIB</p>
                 
                 {article.coverImage && (
-                  <img src={article.coverImage} alt={article.title} className="w-full h-[250px] object-cover rounded-lg" />
+                  <img src={article.coverImage || null} alt={article.title} className="w-full h-[250px] object-cover rounded-lg" />
                 )}
 
                 <p className="text-xs font-bold text-gray-600 dark:text-gray-300 italic bg-gray-50 dark:bg-gray-900 p-3 rounded-lg">{article.summary}</p>
@@ -204,7 +204,7 @@ export default function ArticlePreviewModal({
                 <p className="text-[9px] text-gray-400 font-mono">Wartawan: {article.author} • {article.time}</p>
                 
                 {article.coverImage && (
-                  <img src={article.coverImage} alt={article.title} className="w-full h-40 object-cover rounded-lg" />
+                  <img src={article.coverImage || null} alt={article.title} className="w-full h-40 object-cover rounded-lg" />
                 )}
 
                 <p className="text-xs font-medium text-gray-600 dark:text-gray-300 italic border-l-2 border-red-600 pl-2 leading-relaxed">{article.summary}</p>
@@ -232,7 +232,7 @@ export default function ArticlePreviewModal({
 
               {article.coverImage && (
                 <div className="my-4">
-                  <img src={article.coverImage} alt={article.title} className="w-full h-auto" />
+                  <img src={article.coverImage || null} alt={article.title} className="w-full h-auto" />
                 </div>
               )}
 
@@ -271,7 +271,7 @@ export default function ArticlePreviewModal({
                 
                 {article.coverImage && (
                   <div className="text-center my-4">
-                    <img src={article.coverImage} alt={article.title} className="w-[300px] h-auto object-cover mx-auto border" />
+                    <img src={article.coverImage || null} alt={article.title} className="w-[300px] h-auto object-cover mx-auto border" />
                     <p className="text-[10px] text-gray-500 mt-1 italic">Cover Lampiran Berita</p>
                   </div>
                 )}
@@ -296,7 +296,7 @@ export default function ArticlePreviewModal({
               <p className="text-xs text-gray-400 font-sans">Published by {article.author} • {formattedDate}</p>
 
               {article.coverImage && (
-                <img src={article.coverImage} alt={article.title} className="w-full h-auto max-h-[350px] object-cover rounded-xl border border-gray-900" />
+                <img src={article.coverImage || null} alt={article.title} className="w-full h-auto max-h-[350px] object-cover rounded-xl border border-gray-900" />
               )}
 
               <p className="text-sm font-semibold text-gray-300 bg-gray-900 p-4 rounded-lg italic leading-relaxed">{article.summary}</p>

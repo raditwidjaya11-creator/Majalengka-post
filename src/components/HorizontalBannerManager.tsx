@@ -314,7 +314,7 @@ export default function HorizontalBannerManager({
                       className="border border-gray-150 dark:border-gray-800 hover:border-red-500 dark:hover:border-red-500 bg-white dark:bg-gray-900 p-1.5 rounded-lg text-left text-[10px] hover:shadow-sm transition-all overflow-hidden flex items-center gap-2 group cursor-pointer"
                     >
                       <div className="w-10 h-7 shrink-0 rounded overflow-hidden bg-gray-100 border border-gray-200 dark:border-gray-800">
-                        <img src={preset.imageUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                        <img src={preset.imageUrl || null} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                       </div>
                       <span className="text-gray-700 dark:text-gray-300 font-bold truncate flex-1">{preset.title.split("-")[0]}</span>
                     </button>
@@ -334,7 +334,7 @@ export default function HorizontalBannerManager({
                 </span>
               </div>
               <a href={formState.adUrl || "#"} target="_blank" rel="noreferrer" className="block w-full border border-gray-100 dark:border-gray-800 rounded-lg overflow-hidden bg-gray-50/50 dark:bg-gray-950/40 shadow-xs hover:opacity-95 transition-all">
-                <img src={formState.imageUrl} alt={formState.title} className="w-full object-cover max-h-[100px]" />
+                <img src={formState.imageUrl || null} alt={formState.title} className="w-full object-cover max-h-[100px]" />
               </a>
               <p className="text-[10px] text-gray-400 italic font-mono truncate">Target Link: {formState.adUrl || "belum diset"}</p>
             </div>
@@ -382,7 +382,7 @@ export default function HorizontalBannerManager({
                     {/* Left info & image */}
                     <div className="flex items-start md:items-center gap-4 flex-1 w-full min-w-0">
                       <div className="w-24 sm:w-28 h-12 rounded overflow-hidden bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shrink-0 relative">
-                        <img src={banner.imageUrl} alt={banner.title} className="w-full h-full object-cover" />
+                        <img src={banner.imageUrl || null} alt={banner.title} className="w-full h-full object-cover" />
                         <span className={`absolute top-1 right-1 w-2 h-2 rounded-full border border-white dark:border-gray-900 ${
                           banner.active ? "bg-emerald-500" : "bg-gray-300"
                         }`} />

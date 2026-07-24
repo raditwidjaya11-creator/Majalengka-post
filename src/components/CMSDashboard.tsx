@@ -1669,7 +1669,7 @@ export default function CMSDashboard({
                     
                     {coverImage ? (
                       <div className="relative w-full aspect-video rounded-lg overflow-hidden group">
-                        <img src={coverImage} alt="Cover Preview" className="w-full h-full object-cover" />
+                        <img src={coverImage || null} alt="Cover Preview" className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                           <label
                             htmlFor="input-file-upload"
@@ -1743,7 +1743,7 @@ export default function CMSDashboard({
                               coverImage === preset.url ? "border-red-600 scale-95 shadow" : "border-transparent opacity-80 hover:opacity-100"
                             }`}
                           >
-                            <img src={preset.url} alt={preset.name} className="w-full h-full object-cover" />
+                            <img src={preset.url || null} alt={preset.name} className="w-full h-full object-cover" />
                             <div className="absolute inset-0 bg-black/45 flex items-end p-1">
                               <span className="text-[8px] font-bold text-white leading-none truncate w-full">{preset.name}</span>
                             </div>
@@ -2107,7 +2107,7 @@ export default function CMSDashboard({
                   {/* Preview container */}
                   <div className="h-32 bg-gray-200 dark:bg-gray-900 flex items-center justify-center overflow-hidden relative">
                     {med.type === "photo" ? (
-                      <img src={med.url} alt={med.name} className="w-full h-full object-cover" />
+                      <img src={med.url || null} alt={med.name} className="w-full h-full object-cover" />
                     ) : (
                       <div className="flex flex-col items-center gap-2">
                         <Folder className="w-8 h-8 text-gray-400" />
@@ -2240,7 +2240,7 @@ export default function CMSDashboard({
                         
                         {ban.imageUrl && (
                           <div className="my-2 h-20 w-full overflow-hidden rounded bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-880 relative">
-                            <img src={ban.imageUrl} alt={ban.title} className="w-full h-full object-cover" />
+                            <img src={ban.imageUrl || null} alt={ban.title} className="w-full h-full object-cover" />
                           </div>
                         )}
 
@@ -2962,7 +2962,7 @@ export default function CMSDashboard({
                               <div className="relative aspect-video w-full bg-black rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 shadow-md">
                                 <video
                                   key={localLiveStreamUrl}
-                                  src={localLiveStreamUrl}
+                                  src={localLiveStreamUrl || null}
                                   controls
                                   muted
                                   playsInline

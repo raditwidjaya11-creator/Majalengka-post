@@ -17,6 +17,13 @@ import { slugify } from "../utils/slugify";
 import { getYouTubeEmbedUrl } from "../lib/youtube";
 import { safeLocalStorage } from "../lib/safeStorage";
 
+const calculateReadingTime = (content?: string, subTitle?: string, title?: string): string => {
+  const text = `${title || ""} ${subTitle || ""} ${(content || "").replace(/<[^>]*>/g, " ")}`;
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  const minutes = Math.max(1, Math.ceil(words / 200));
+  return `${minutes} min baca`;
+};
+
 interface PublicPortalProps {
   articles: Article[];
   banners: AdBanner[];
@@ -652,16 +659,18 @@ export default function PublicPortal({
                     className="w-full relative flex items-center h-[80px] sm:h-[100px] md:h-[120px]"
                   >
                     <a
-                      href={banner.adUrl}
+                      href={banner?.adUrl || "#"}
                       target="_blank"
                       rel="noreferrer"
                       onClick={() => handleAdClick(banner)}
                       className="w-full h-full block"
                     >
                       <img
-                        src={banner.imageUrl}
+                        src={banner.imageUrl || null}
                         alt={banner.title}
                         className="w-full h-full object-cover"
+                        loading="lazy"
+                        decoding="async"
                       />
                     </a>
                     
@@ -772,7 +781,7 @@ export default function PublicPortal({
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <span className="flex items-center gap-1">
                   <Calendar className="w-3.5 h-3.5" />
                   <span>{selectedArticle.date}</span>
@@ -780,6 +789,10 @@ export default function PublicPortal({
                 <span className="flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5" />
                   <span>{selectedArticle.time} WIB</span>
+                </span>
+                <span className="flex items-center gap-1 text-red-600 dark:text-red-400 font-semibold">
+                  <BookOpen className="w-3.5 h-3.5 text-red-500" />
+                  <span>{calculateReadingTime(selectedArticle.content, selectedArticle.subTitle, selectedArticle.title)}</span>
                 </span>
               </div>
             </div>
@@ -869,9 +882,11 @@ export default function PublicPortal({
             {/* Cover image */}
             <div className="mb-6 rounded-xl overflow-hidden shadow-sm">
               <img
-                src={selectedArticle.coverImage}
+                src={selectedArticle.coverImage || null}
                 alt={selectedArticle.title}
                 className="w-full object-cover max-h-[460px]"
+                loading="lazy"
+                decoding="async"
               />
               <p className="text-[11px] text-gray-400 dark:text-gray-500 text-center py-2 bg-gray-50 dark:bg-gray-950">
                 Lokasi Liputan: {selectedArticle.location} — {selectedArticle.gpsCoords ? `GPS Coordinates: [${selectedArticle.gpsCoords.lat}, ${selectedArticle.gpsCoords.lng}]` : ""}
@@ -891,7 +906,7 @@ export default function PublicPortal({
                 <h4 className="text-sm font-bold uppercase text-gray-500 tracking-wider mb-3">Liputan Video Terkait</h4>
                 <div className="aspect-video w-full rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800">
                   <iframe
-                    src={getYouTubeEmbedUrl(selectedArticle.videoUrl, false)}
+                    src={getYouTubeEmbedUrl(selectedArticle.videoUrl, false) || null}
                     title="YouTube video player"
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -908,7 +923,7 @@ export default function PublicPortal({
                 <h4 className="text-sm font-bold uppercase text-gray-500 tracking-wider mb-3">Galeri Foto Kejadian</h4>
                 <div className="grid grid-cols-2 gap-3">
                   {selectedArticle.galleryImages.map((img, i) => (
-                    <img key={i} src={img} alt={`Galeri ${i}`} className="rounded-lg object-cover w-full h-40 border border-gray-100 dark:border-gray-800" />
+                    <img key={i} src={img || null} alt={`Galeri ${i}`} className="rounded-lg object-cover w-full h-40 border border-gray-100 dark:border-gray-800" loading="lazy" decoding="async" />
                   ))}
                 </div>
               </div>
@@ -1261,9 +1276,11 @@ export default function PublicPortal({
                       >
                         <div className="relative overflow-hidden aspect-video">
                           <img
-                            src={art.coverImage}
+                            src={art.coverImage || null}
                             alt={art.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            loading="lazy"
+                            decoding="async"
                           />
                           <span className="bg-slate-900/80 text-white font-bold text-[8px] uppercase tracking-wider px-2 py-0.5 rounded absolute bottom-2 right-2">
                             {art.category}
@@ -1348,7 +1365,7 @@ export default function PublicPortal({
                 {comments.map((comm) => (
                   <div key={comm.id} className="border-b border-gray-100 dark:border-gray-850 pb-5">
                     <div className="flex items-start gap-3">
-                      <img src={comm.avatar} alt={comm.user} className="w-10 h-10 rounded-full object-cover shrink-0" />
+                      <img src={comm.avatar || null} alt={comm.user} className="w-10 h-10 rounded-full object-cover shrink-0" loading="lazy" decoding="async" />
                       <div className="flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-bold text-xs text-gray-900 dark:text-white">{comm.user}</span>
@@ -1416,7 +1433,7 @@ export default function PublicPortal({
                           <div className="mt-4 pl-4 border-l-2 border-gray-150 dark:border-gray-800 space-y-4">
                             {comm.replies.map((rep) => (
                               <div key={rep.id} className="flex items-start gap-2">
-                                <img src={rep.avatar} alt={rep.user} className="w-8 h-8 rounded-full object-cover shrink-0" />
+                                <img src={rep.avatar || null} alt={rep.user} className="w-8 h-8 rounded-full object-cover shrink-0" loading="lazy" decoding="async" />
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2">
                                     <span className="font-bold text-xs text-gray-900 dark:text-white">{rep.user}</span>
@@ -1483,8 +1500,8 @@ export default function PublicPortal({
             {/* Banner sidebar ad */}
             {sidebarBanner && (
               <div className="rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm">
-                <a href={sidebarBanner.adUrl} target="_blank" rel="noreferrer">
-                  <img src={sidebarBanner.imageUrl} alt={sidebarBanner.title} className="w-full object-cover h-[350px]" />
+                <a href={sidebarBanner?.adUrl || "#"} target="_blank" rel="noreferrer">
+                  <img src={sidebarBanner.imageUrl || null} alt={sidebarBanner.title} className="w-full object-cover h-[350px]" loading="lazy" decoding="async" />
                 </a>
               </div>
             )}
@@ -1497,7 +1514,7 @@ export default function PublicPortal({
               <div className="space-y-4">
                 {latestArticles.slice(0, 5).map((art) => (
                   <div key={art.id} onClick={() => onSelectArticle(art)} className="flex gap-3 cursor-pointer group">
-                    <img src={art.coverImage} alt={art.title} className="w-16 h-16 object-cover rounded-lg shrink-0 border border-gray-100 dark:border-gray-800" />
+                    <img src={art.coverImage || null} alt={art.title} className="w-16 h-16 object-cover rounded-lg shrink-0 border border-gray-100 dark:border-gray-800" loading="lazy" decoding="async" />
                     <div className="flex-1">
                       <p className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase">{art.category}</p>
                       <h5 className="text-xs font-bold text-gray-800 dark:text-gray-200 leading-tight group-hover:text-red-500 transition-colors line-clamp-2">
@@ -1521,9 +1538,11 @@ export default function PublicPortal({
             <div className="flex flex-col md:relative md:rounded-2xl rounded-xl overflow-hidden h-auto md:h-[460px] bg-slate-950 group shadow-none border border-slate-200 dark:border-slate-850">
               <div className="w-full h-52 sm:h-64 md:h-full relative shrink-0">
                 <img
-                  src={headlineArticles[headlineIndex].coverImage}
-                  alt={headlineArticles[headlineIndex].title}
+                  src={headlineArticles[headlineIndex]?.coverImage || null}
+                  alt={headlineArticles[headlineIndex]?.title}
                   className="w-full h-full object-cover opacity-90 md:opacity-85 hover:scale-[1.01] transition-transform duration-700"
+                  loading="lazy"
+                  decoding="async"
                 />
                 {/* Gradients only on desktop */}
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent hidden md:block"></div>
@@ -1663,9 +1682,11 @@ export default function PublicPortal({
                     >
                       <div className="relative overflow-hidden h-48 md:h-44">
                         <img
-                          src={art.coverImage}
+                          src={art.coverImage || null}
                           alt={art.title}
                           className="w-full h-full object-cover group-hover:scale-104 transition-transform duration-300"
+                          loading="lazy"
+                          decoding="async"
                         />
                         {art.isBreaking && (
                           <span className="bg-red-600 text-white font-bold text-[9px] uppercase tracking-wider px-2 py-0.5 rounded absolute top-2.5 left-2.5 shadow animate-pulse">
@@ -1764,7 +1785,7 @@ export default function PublicPortal({
                   {/* Featured Big video representation */}
                   <div className="md:col-span-7 space-y-3">
                     <div className="aspect-video bg-black rounded-lg overflow-hidden relative border border-slate-800 group">
-                      <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=800" alt="Video cover" className="w-full h-full object-cover opacity-70" />
+                      <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=800" alt="Video cover" className="w-full h-full object-cover opacity-70" loading="lazy" decoding="async" />
                       <div className="absolute inset-0 flex items-center justify-center">
                         <button className="w-10 h-10 rounded-full bg-red-600 hover:bg-red-500 flex items-center justify-center shadow-lg transition-transform group-hover:scale-105">
                           <Play className="w-4 h-4 text-white ml-0.5" />
@@ -1777,14 +1798,14 @@ export default function PublicPortal({
                   {/* Right side secondary multimedia list */}
                   <div className="md:col-span-5 space-y-3">
                     <div className="flex gap-3 items-center p-2 rounded hover:bg-slate-800 cursor-pointer">
-                      <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=150" alt="tech" className="w-16 h-12 object-cover rounded" />
+                      <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=150" alt="tech" className="w-16 h-12 object-cover rounded" loading="lazy" decoding="async" />
                       <div>
                         <p className="text-[9px] text-slate-400 font-bold uppercase font-mono">Infografis</p>
                         <h5 className="text-[11px] font-bold leading-tight text-white line-clamp-2">Panduan Pengurangan Emisi Karbon Sektor Industri Nasional</h5>
                       </div>
                     </div>
                     <div className="flex gap-3 items-center p-2 rounded hover:bg-slate-800 cursor-pointer">
-                      <img src="https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?q=80&w=150" alt="toll" className="w-16 h-12 object-cover rounded" />
+                      <img src="https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?q=80&w=150" alt="toll" className="w-16 h-12 object-cover rounded" loading="lazy" decoding="async" />
                       <div>
                         <p className="text-[9px] text-slate-400 font-bold uppercase font-mono">Foto Udara</p>
                         <h5 className="text-[11px] font-bold leading-tight text-white line-clamp-2">Visualisasi Drone Ruas Terakhir Tol Trans-Sumatera Selesai Sempurna</h5>
@@ -1928,6 +1949,8 @@ export default function PublicPortal({
                               src={art.coverImage || "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=150"} 
                               alt={art.title} 
                               className="w-12 h-10 object-cover rounded-lg shrink-0" 
+                              loading="lazy"
+                              decoding="async"
                             />
                             <div className="flex-1 min-w-0">
                               <span className="text-[8px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-1 rounded font-bold uppercase tracking-wider">
@@ -2350,9 +2373,11 @@ export default function PublicPortal({
                     {/* Image */}
                     <div className="w-full aspect-[4/3] rounded-lg overflow-hidden border border-white/10 my-3 shadow-md bg-gray-800">
                       <img
-                        src={selectedArticle.coverImage}
+                        src={selectedArticle.coverImage || null}
                         alt={selectedArticle.title}
                         className="w-full h-full object-cover"
+                        loading="lazy"
+                        decoding="async"
                       />
                     </div>
 

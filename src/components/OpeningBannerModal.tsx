@@ -305,7 +305,7 @@ export default function OpeningBannerModal({
                   </div>
                 )}
                 <img
-                  src={activeBanner.imageUrl}
+                  src={activeBanner.imageUrl || null}
                   alt={activeBanner.title}
                   onLoad={() => setImageLoaded(true)}
                   onError={() => setImageLoaded(true)}

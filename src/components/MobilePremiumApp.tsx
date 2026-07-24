@@ -122,6 +122,14 @@ const HeartBurstEffect: React.FC<{ active?: boolean }> = ({ active = true }) => 
   );
 };
 
+/* Helper to calculate estimated reading time based on word count (approx 200 words/min) */
+export const calculateReadingTime = (content?: string, subTitle?: string, title?: string): string => {
+  const text = `${title || ""} ${subTitle || ""} ${(content || "").replace(/<[^>]*>/g, " ")}`;
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  const minutes = Math.max(1, Math.ceil(words / 200));
+  return `${minutes} min baca`;
+};
+
 export default function MobilePremiumApp({
   articles,
   banners,
@@ -1259,10 +1267,12 @@ export default function MobilePremiumApp({
             onClick={() => { onSelectCategory(""); onSelectArticle(null); setActiveTab("beranda"); }}
           >
             <img
-              src={logoImg}
+              src={logoImg || null}
               className="w-9 h-9 object-contain rounded-full border border-slate-200 bg-white shadow-sm transition-transform active:scale-95 duration-200"
               alt="Majalengka Post Logo"
               referrerPolicy="no-referrer"
+              loading="lazy"
+              decoding="async"
             />
             <div className="flex flex-col">
               <h1 className="text-xs font-black text-slate-800 tracking-tight leading-none uppercase flex items-center">
@@ -1410,10 +1420,11 @@ export default function MobilePremiumApp({
             {/* Parallax cover image */}
             <div className="relative aspect-video rounded-3xl overflow-hidden shadow-lg mb-4">
               <img 
-                src={selectedArticle.coverImage} 
+                src={selectedArticle.coverImage || null} 
                 alt={selectedArticle.title} 
                 className="w-full h-full object-cover"
                 loading="lazy"
+                decoding="async"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
               
@@ -1561,12 +1572,17 @@ export default function MobilePremiumApp({
               </p>
             )}
 
-            <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-900 pb-4 mb-4 text-xs text-slate-400">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap border-b border-slate-100 dark:border-slate-900 pb-4 mb-4 text-xs text-slate-400">
               <span className="font-extrabold text-slate-600 dark:text-slate-300">Oleh: {selectedArticle.author}</span>
-              <span className="w-1 h-1 rounded-full bg-slate-300" />
+              <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
               <span>{selectedArticle.date}</span>
-              <span className="w-1 h-1 rounded-full bg-slate-300" />
+              <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
               <span>{selectedArticle.time} WIB</span>
+              <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
+              <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400 font-semibold">
+                <Clock className="w-3.5 h-3.5 text-red-500" />
+                <span>{calculateReadingTime(selectedArticle.content, selectedArticle.subTitle, selectedArticle.title)}</span>
+              </span>
             </div>
 
             {/* Article Content with adjustable font size */}
@@ -1776,11 +1792,15 @@ export default function MobilePremiumApp({
                     className="w-48 shrink-0 bg-white dark:bg-slate-900 p-2.5 rounded-2xl border border-slate-100 dark:border-slate-850 cursor-pointer snap-start"
                   >
                     <div className="aspect-video w-full rounded-xl overflow-hidden mb-2">
-                      <img src={art.coverImage} alt="" className="w-full h-full object-cover" />
+                      <img src={art.coverImage || null} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
                     </div>
                     <h4 className="font-extrabold text-xs text-slate-800 dark:text-white line-clamp-2 leading-snug">
                       {art.title}
                     </h4>
+                    <div className="flex items-center gap-1 text-[10px] text-slate-400 mt-1 font-medium">
+                      <Clock className="w-2.5 h-2.5 text-red-500 shrink-0" />
+                      <span>{calculateReadingTime(art.content, art.subTitle, art.title)}</span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1887,7 +1907,7 @@ export default function MobilePremiumApp({
                               {/* Parent Comment Header */}
                               <div className="flex justify-between items-start">
                                 <div className="flex items-center gap-2">
-                                  <img src={comment.avatar} alt={comment.user} className="w-6 h-6 rounded-full bg-slate-100 border border-slate-200 dark:border-slate-800" />
+                                  <img src={comment.avatar || null} alt={comment.user} className="w-6 h-6 rounded-full bg-slate-100 border border-slate-200 dark:border-slate-800" loading="lazy" decoding="async" />
                                   <div>
                                     <span className="font-extrabold text-slate-800 dark:text-slate-200">{comment.user}</span>
                                     <span className="text-[10px] text-slate-400 mx-1.5">• {formatCommentTime(comment.timestamp)}</span>
@@ -2022,7 +2042,7 @@ export default function MobilePremiumApp({
                                         {/* Reply Header */}
                                         <div className="flex justify-between items-start">
                                           <div className="flex items-center gap-1.5">
-                                            <img src={reply.avatar} alt={reply.user} className="w-5 h-5 rounded-full bg-slate-200 border border-slate-300 dark:border-slate-800" />
+                                            <img src={reply.avatar || null} alt={reply.user} className="w-5 h-5 rounded-full bg-slate-200 border border-slate-300 dark:border-slate-800" loading="lazy" decoding="async" />
                                             <div className="flex items-center flex-wrap gap-1">
                                               <span className="font-bold text-slate-800 dark:text-slate-200 text-[11px]">{reply.user}</span>
                                               {(reply.user.includes("Editor") || reply.user.includes("Redaksi")) && (
@@ -2208,15 +2228,17 @@ export default function MobilePremiumApp({
                   <div className="mb-4 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm relative">
                     <div className="w-full relative flex items-center h-[90px]">
                       <a
-                        href={activeHeaderBanners[currentHeaderIndex].adUrl}
+                        href={activeHeaderBanners[currentHeaderIndex]?.adUrl || "#"}
                         target="_blank"
                         rel="noreferrer"
                         className="w-full h-full block"
                       >
                         <img
-                          src={activeHeaderBanners[currentHeaderIndex].imageUrl}
-                          alt={activeHeaderBanners[currentHeaderIndex].title}
+                          src={activeHeaderBanners[currentHeaderIndex]?.imageUrl || null}
+                          alt={activeHeaderBanners[currentHeaderIndex]?.title}
                           className="w-full h-full object-cover"
+                          loading="lazy"
+                          decoding="async"
                         />
                       </a>
                       
@@ -2267,9 +2289,11 @@ export default function MobilePremiumApp({
                     className="relative aspect-[4/3] rounded-3xl overflow-hidden shadow-xl mb-6 cursor-pointer group"
                   >
                     <img 
-                      src={filteredArticles[0].coverImage} 
+                      src={filteredArticles[0]?.coverImage || null} 
                       alt="" 
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      loading="lazy"
+                      decoding="async"
                     />
                     {/* Shadow overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/40 to-transparent" />
@@ -2291,10 +2315,21 @@ export default function MobilePremiumApp({
                         {filteredArticles[0].title}
                       </h3>
                       
-                      <div className="flex items-center gap-3 text-[10px] text-slate-300 font-bold">
+                      <div className="flex items-center gap-2.5 text-[10px] text-slate-300 font-bold flex-wrap">
+                        {filteredArticles[0].author && (
+                          <>
+                            <span className="text-white font-extrabold">Oleh: {filteredArticles[0].author}</span>
+                            <span className="w-1 h-1 rounded-full bg-slate-500" />
+                          </>
+                        )}
                         <span>{filteredArticles[0].date}</span>
                         <span className="w-1 h-1 rounded-full bg-slate-500" />
                         <span>{filteredArticles[0].views || 102} dibaca</span>
+                        <span className="w-1 h-1 rounded-full bg-slate-500" />
+                        <span className="flex items-center gap-1 text-amber-300 font-semibold">
+                          <Clock className="w-3 h-3 text-amber-400" />
+                          <span>{calculateReadingTime(filteredArticles[0].content, filteredArticles[0].subTitle, filteredArticles[0].title)}</span>
+                        </span>
                         <span className="ml-auto flex gap-1.5">
                           <button 
                             onClick={(e) => {
@@ -2351,7 +2386,7 @@ export default function MobilePremiumApp({
                           >
                             {/* Big left side photo */}
                             <div className="w-24 h-24 rounded-2xl overflow-hidden shrink-0 relative bg-slate-100">
-                              <img src={art.coverImage} alt="" className="w-full h-full object-cover" loading="lazy" />
+                              <img src={art.coverImage || null} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
                               {art.videoUrl && (
                                 <span className="absolute inset-0 bg-black/35 flex items-center justify-center">
                                   <Play className="w-6 h-6 text-white fill-white animate-pulse" />
@@ -2362,11 +2397,16 @@ export default function MobilePremiumApp({
                             {/* Text and badges */}
                             <div className="flex-1 flex flex-col justify-between">
                               <div>
-                                <div className="flex items-center gap-1.5 mb-1.5">
+                                <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
                                   <span className="text-[9px] font-black uppercase tracking-widest text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 px-2 py-0.5 rounded-full">
                                     {art.category}
                                   </span>
                                   <span className="text-[9px] text-slate-400 font-bold">{art.time}</span>
+                                  <span className="text-[9px] text-slate-400">•</span>
+                                  <span className="text-[9px] text-slate-400 font-medium flex items-center gap-0.5">
+                                    <Clock className="w-2.5 h-2.5 text-red-500 shrink-0" />
+                                    <span>{calculateReadingTime(art.content, art.subTitle, art.title)}</span>
+                                  </span>
                                 </div>
                                 <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white line-clamp-2 leading-snug">
                                   {art.title}
@@ -2404,15 +2444,17 @@ export default function MobilePremiumApp({
                             <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-900 shadow-sm relative">
                               <div className="w-full relative flex items-center h-[90px]">
                                 <a
-                                  href={centerBanners[0].adUrl}
+                                  href={centerBanners[0]?.adUrl || "#"}
                                   target="_blank"
                                   rel="noreferrer"
                                   className="w-full h-full block"
                                 >
                                   <img
-                                    src={centerBanners[0].imageUrl}
-                                    alt={centerBanners[0].title}
+                                    src={centerBanners[0]?.imageUrl || null}
+                                    alt={centerBanners[0]?.title}
                                     className="w-full h-full object-cover"
+                                    loading="lazy"
+                                    decoding="async"
                                   />
                                 </a>
                                 <div className="absolute bottom-1.5 right-1.5 bg-black/60 backdrop-blur-xs text-[8px] font-bold text-white px-1.5 py-0.5 rounded font-mono pointer-events-none uppercase tracking-wider">
@@ -2495,13 +2537,22 @@ export default function MobilePremiumApp({
                       className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850 p-4 rounded-[20px] flex gap-3 cursor-pointer"
                     >
                       <div className="w-20 h-20 rounded-xl overflow-hidden shrink-0">
-                        <img src={art.coverImage} alt="" className="w-full h-full object-cover" />
+                        <img src={art.coverImage || null} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
                       </div>
                       <div className="flex-1 flex flex-col justify-between">
                         <h4 className="font-extrabold text-xs text-slate-900 dark:text-white line-clamp-2 leading-snug">
                           {art.title}
                         </h4>
-                        <span className="text-[10px] text-slate-400">{art.date} • {art.category}</span>
+                        <div className="flex items-center gap-1.5 text-[10px] text-slate-400 flex-wrap mt-1 font-medium">
+                          <span>{art.date}</span>
+                          <span>•</span>
+                          <span>{art.category}</span>
+                          <span>•</span>
+                          <span className="flex items-center gap-0.5 text-slate-500 dark:text-slate-400">
+                            <Clock className="w-2.5 h-2.5 text-red-500 shrink-0" />
+                            <span>{calculateReadingTime(art.content, art.subTitle, art.title)}</span>
+                          </span>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -2525,7 +2576,7 @@ export default function MobilePremiumApp({
                     >
                       {/* Video Embed Simulation */}
                       <div className="aspect-video w-full bg-slate-950 relative flex items-center justify-center">
-                        <img src={art.coverImage} alt="" className="w-full h-full object-cover opacity-70" />
+                        <img src={art.coverImage || null} alt="" className="w-full h-full object-cover opacity-70" loading="lazy" decoding="async" />
                         <span className="absolute w-14 h-14 bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg border-2 border-white">
                           <Play className="w-6 h-6 fill-white ml-1 shrink-0" />
                         </span>
@@ -2553,7 +2604,7 @@ export default function MobilePremiumApp({
                     {liveStreamActive ? (
                       liveStreamType === "youtube" ? (
                         <iframe
-                          src={getYouTubeEmbedUrl(liveStreamUrl, isLiveMuted)}
+                          src={getYouTubeEmbedUrl(liveStreamUrl, isLiveMuted) || null}
                           title={liveStreamTitle || "Majalengka Post TV Live"}
                           className="w-full h-full border-0 absolute inset-0"
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -2562,9 +2613,11 @@ export default function MobilePremiumApp({
                       ) : liveStreamType === "camera" ? (
                         activeCameraFrame ? (
                           <img
-                            src={activeCameraFrame}
+                            src={activeCameraFrame || null}
                             alt="Live Stream Feed"
                             className="w-full h-full object-cover transform -scale-x-100 absolute inset-0"
+                            loading="lazy"
+                            decoding="async"
                           />
                         ) : (
                           <div className="absolute inset-0 flex flex-col items-center justify-center space-y-2 bg-slate-950">
@@ -2572,11 +2625,11 @@ export default function MobilePremiumApp({
                             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Transmisi Belum Dimulai...</p>
                           </div>
                         )
-                      ) : (
+                      ) : liveStreamUrl ? (
                         // Custom direct video source (MP4 / HLS / WebM)
                         <video
                           ref={mobileLiveVideoRef}
-                          src={liveStreamUrl}
+                          src={liveStreamUrl || null}
                           controls
                           autoPlay
                           muted={isLiveMuted}
@@ -2584,6 +2637,11 @@ export default function MobilePremiumApp({
                           playsInline
                           className="w-full h-full object-contain absolute inset-0 bg-slate-950"
                         />
+                      ) : (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center space-y-2 bg-slate-950">
+                          <Radio className="w-8 h-8 text-red-600 animate-pulse" />
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Transmisi Belum Dimulai...</p>
+                        </div>
                       )
                     ) : (
                       <div className="absolute inset-0 flex flex-col items-center justify-center space-y-2 bg-slate-950">
@@ -3627,7 +3685,7 @@ export default function MobilePremiumApp({
               <div className="space-y-6">
                 {/* Article Info */}
                 <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-2xl flex gap-3 border border-slate-100 dark:border-slate-850">
-                  <img src={shareSheetArticle.coverImage} className="w-16 h-12 rounded-xl object-cover shrink-0 bg-slate-100" alt="" />
+                  <img src={shareSheetArticle.coverImage || null} className="w-16 h-12 rounded-xl object-cover shrink-0 bg-slate-100" alt="" loading="lazy" decoding="async" />
                   <div className="flex flex-col justify-center">
                     <h4 className="font-extrabold text-slate-900 dark:text-white text-xs line-clamp-2 leading-snug">
                       {shareSheetArticle.title}
