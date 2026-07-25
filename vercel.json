@@ -89,6 +89,14 @@
       "destination": "/api/index?__vercel_original_path=/sitemap.xml"
     },
     {
+      "source": "/news-sitemap.xml",
+      "destination": "/api/index?__vercel_original_path=/news-sitemap.xml"
+    },
+    {
+      "source": "/google-news-sitemap.xml",
+      "destination": "/api/index?__vercel_original_path=/google-news-sitemap.xml"
+    },
+    {
       "source": "/google:hash.html",
       "destination": "/api/index?hash=:hash&__vercel_original_path=/google:hash.html"
     },

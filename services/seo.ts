@@ -320,7 +320,7 @@ export async function generateGoogleNewsSitemapXML(baseUrl: string): Promise<str
     const cleanKeywords = escapeXml(rawKeywords);
 
     xml += `  <url>
-    <loc>${articleUrl}</loc>
+    <loc>${escapeXml(articleUrl)}</loc>
     <news:news>
       <news:publication>
         <news:name>Majalengka Post</news:name>

@@ -12,6 +12,7 @@ import healthHandler from "../server-api/health.js";
 import newsDigestHandler from "../server-api/news-digest.js";
 import robotsHandler from "../server-api/robots.js";
 import sitemapHandler from "../server-api/sitemap.js";
+import newsSitemapHandler from "../server-api/news-sitemap.js";
 import googleVerifyHandler from "../server-api/google-verify.js";
 import uploadsHandler from "../server-api/uploads.js";
 import assistantHandler from "../server-api/gemini/assistant.js";
@@ -386,7 +387,8 @@ app.get([
 
 // SEO Files routes
 app.all("/robots.txt", robotsHandler);
-app.all("/sitemap.xml", sitemapHandler);
+app.all(["/sitemap.xml", "/api/sitemap.xml"], sitemapHandler);
+app.all(["/news-sitemap.xml", "/google-news-sitemap.xml", "/api/news-sitemap.xml", "/api/google-news-sitemap.xml"], newsSitemapHandler);
 app.all("/google:hash.html", googleVerifyHandler);
 
 // Dynamic/SEO Pages fallback handler
