@@ -579,21 +579,21 @@ async function startServer() {
       } else {
         xml = await generateGoogleNewsSitemapXML(baseUrl);
       }
-      res.type("application/xml");
-      res.send(xml);
+      res.setHeader("Content-Type", "application/xml; charset=utf-8");
+      res.status(200).send(xml);
     } catch (err: any) {
       console.error("Error in sitemap.xml route:", err);
       res.status(500).send("Error generating sitemap");
     }
   });
 
-  // SEO: news-sitemap.xml (Google News Sitemap)
+  // SEO: news-sitemap.xml (Google News Sitemap) & /api/news-sitemap.xml
   app.get(["/news-sitemap.xml", "/google-news-sitemap.xml", "/api/news-sitemap.xml", "/api/google-news-sitemap.xml"], async (req, res) => {
     try {
       const baseUrl = getBaseUrl(req);
       const xml = await generateGoogleNewsSitemapXML(baseUrl);
-      res.type("application/xml");
-      res.send(xml);
+      res.setHeader("Content-Type", "application/xml; charset=utf-8");
+      res.status(200).send(xml);
     } catch (err: any) {
       console.error("Error in news-sitemap.xml route:", err);
       res.status(500).send("Error generating Google News sitemap");
