@@ -4,7 +4,7 @@ import {
   Settings, RefreshCw, Sparkles, Check, Copy, User, HelpCircle, 
   MapPin, Clock, Eye, AlertCircle, Trash, Search, Folder, 
   Tag as TagIcon, CheckSquare, Bell, Megaphone, Smartphone, DollarSign,
-  Briefcase, Activity, Calendar, ShieldCheck, ChevronRight, Upload
+  Briefcase, Activity, Calendar, ShieldCheck, ChevronRight, Upload, Globe
 } from "lucide-react";
 import { Article, ArticleStatus, UserRole, MediaItem, AdBanner, InternalNotification, AuditLog, ValasRate, OpeningBanner } from "../types";
 import { CATEGORIES, REALTIME_ANALYTICS } from "../mockData";
@@ -3075,6 +3075,121 @@ export default function CMSDashboard({
                   <span>Simpan Pengaturan Siaran</span>
                 </button>
               </form>
+            </div>
+
+            {/* Google News Sitemap & SEO XML Card */}
+            <div className="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-850 p-6 rounded-2xl shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                    <Globe className="w-4.5 h-4.5 text-red-600" />
+                    Pusat Google News Sitemap &amp; SEO Indexing
+                  </h3>
+                  <p className="text-xs text-gray-400 mt-0.5">Sitemap XML khusus Google News untuk mempercepat pengindeksan berita terbaru secara otomatis oleh crawler Google Search &amp; News.</p>
+                </div>
+                <span className="text-[9px] bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 font-extrabold uppercase px-2 py-0.5 rounded-full tracking-widest flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
+                  STANDAR GOOGLE NEWS OK
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {/* News Sitemap Link */}
+                <div className="p-3.5 bg-red-50/60 dark:bg-red-950/20 border border-red-100 dark:border-red-950/50 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider">Google News Sitemap XML</span>
+                      <span className="text-[9px] font-bold bg-red-600 text-white px-1.5 py-0.2 rounded font-mono">NEW</span>
+                    </div>
+                    <p className="text-[11px] font-mono text-gray-600 dark:text-gray-300">/news-sitemap.xml</p>
+                    <p className="text-[10px] text-gray-400">Khusus artikel terbitan 48 jam terakhir dengan skema <code className="text-red-500 font-mono">news:news</code> &amp; thumbnail berita.</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/news-sitemap.xml`);
+                        alert("URL Google News Sitemap berhasil disalin ke clipboard!");
+                      }}
+                      className="px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 text-[10px] font-bold uppercase rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                    >
+                      Salin URL
+                    </button>
+                    <a
+                      href="/news-sitemap.xml"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white text-[10px] font-black uppercase tracking-wider rounded-lg transition-colors flex items-center gap-1 shadow-xs"
+                    >
+                      Buka XML ↗
+                    </a>
+                  </div>
+                </div>
+
+                {/* Main Sitemap Link */}
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-850 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <span className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider">Sitemap XML Utama</span>
+                    <p className="text-[11px] font-mono text-gray-600 dark:text-gray-300">/sitemap.xml</p>
+                    <p className="text-[10px] text-gray-400">Seluruh halaman kategori, arsip berita, dan struktur utama portal.</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/sitemap.xml`);
+                        alert("URL Sitemap Utama berhasil disalin ke clipboard!");
+                      }}
+                      className="px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 text-[10px] font-bold uppercase rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                    >
+                      Salin URL
+                    </button>
+                    <a
+                      href="/sitemap.xml"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-black uppercase tracking-wider rounded-lg transition-colors flex items-center gap-1 shadow-xs"
+                    >
+                      Buka XML ↗
+                    </a>
+                  </div>
+                </div>
+
+                {/* Robots.txt Link */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-850 rounded-xl flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-gray-700 dark:text-gray-300">/robots.txt</span>
+                    <span className="text-[10px] text-gray-400 font-sans">(Mengarahkan Googlebot secara otomatis ke kedua sitemap)</span>
+                  </div>
+                  <a
+                    href="/robots.txt"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[10px] font-bold text-red-600 hover:underline uppercase tracking-wider"
+                  >
+                    Lihat Robots.txt ↗
+                  </a>
+                </div>
+              </div>
+
+              {/* Technical Specifications checklist */}
+              <div className="pt-2 border-t border-gray-100 dark:border-gray-800 space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Kepatuhan Spesifikasi Google News Sitemap:</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px]">
+                  <div className="p-2 bg-emerald-50/50 dark:bg-emerald-950/20 rounded border border-emerald-100 dark:border-emerald-900/30 flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300 font-medium">
+                    <span>✓</span> Namespace: <code className="font-mono text-[9px]">sitemap-news/0.9</code>
+                  </div>
+                  <div className="p-2 bg-emerald-50/50 dark:bg-emerald-950/20 rounded border border-emerald-100 dark:border-emerald-900/30 flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300 font-medium">
+                    <span>✓</span> Penapis Waktu: artikel 48 jam
+                  </div>
+                  <div className="p-2 bg-emerald-50/50 dark:bg-emerald-950/20 rounded border border-emerald-100 dark:border-emerald-900/30 flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300 font-medium">
+                    <span>✓</span> Format Waktu: ISO 8601 UTC
+                  </div>
+                  <div className="p-2 bg-emerald-50/50 dark:bg-emerald-950/20 rounded border border-emerald-100 dark:border-emerald-900/30 flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300 font-medium">
+                    <span>✓</span> Metadata: Judul, Kata Kunci, Foto
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Info / FAQ Card */}

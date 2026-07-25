@@ -215,6 +215,16 @@ export function injectGeneralSEOMetadata(
   return processedHtml;
 }
 
+export function escapeXml(str: string): string {
+  if (!str) return "";
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
 export async function generateSitemapXML(baseUrl: string): Promise<string> {
   const articlesList = await fetchArticles();
   
@@ -253,9 +263,99 @@ export async function generateSitemapXML(baseUrl: string): Promise<string> {
   return sitemapIndex;
 }
 
+export async function generateGoogleNewsSitemapXML(baseUrl: string): Promise<string> {
+  const articlesList = await fetchArticles();
+  
+  // Sort articles by publication date descending
+  const sortedArticles = [...articlesList].sort((a: any, b: any) => {
+    const timeA = new Date(a.date || 0).getTime();
+    const timeB = new Date(b.date || 0).getTime();
+    return timeB - timeA;
+  });
+
+  // According to Google News Sitemap specs:
+  // Include articles published in the last 2 days (48 hours), max 1000 items.
+  const now = Date.now();
+  const twoDaysMs = 48 * 60 * 60 * 1000;
+  
+  let newsArticles = sortedArticles.filter((art: any) => {
+    if (!art.date) return false;
+    const artTime = new Date(art.date).getTime();
+    return (now - artTime) <= twoDaysMs;
+  });
+
+  // Fallback: If no articles found in the last 48 hours (e.g. static mock data or fresh setup), include top 50 latest articles so sitemap is valid
+  if (newsArticles.length === 0) {
+    newsArticles = sortedArticles.slice(0, 50);
+  } else if (newsArticles.length > 1000) {
+    newsArticles = newsArticles.slice(0, 1000);
+  }
+
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+`;
+
+  newsArticles.forEach((art: any) => {
+    const slug = slugify(art.title);
+    const articleUrl = `${baseUrl}/artikel/${slug}`;
+    const cleanTitle = escapeXml(art.title);
+    
+    // ISO Publication Date
+    let pubDateISO: string;
+    try {
+      if (art.date) {
+        const timeStr = art.time ? `T${art.time.length === 5 ? art.time + ':00' : art.time}` : 'T08:00:00';
+        const d = new Date(`${art.date}${timeStr}`);
+        pubDateISO = !isNaN(d.getTime()) ? d.toISOString() : new Date().toISOString();
+      } else {
+        pubDateISO = new Date().toISOString();
+      }
+    } catch {
+      pubDateISO = new Date().toISOString();
+    }
+
+    const rawKeywords = art.seo?.keywords || (Array.isArray(art.tags) ? art.tags.join(", ") : "") || art.category || "Majalengka, Berita";
+    const cleanKeywords = escapeXml(rawKeywords);
+
+    xml += `  <url>
+    <loc>${articleUrl}</loc>
+    <news:news>
+      <news:publication>
+        <news:name>Majalengka Post</news:name>
+        <news:language>id</news:language>
+      </news:publication>
+      <news:publication_date>${pubDateISO}</news:publication_date>
+      <news:title>${cleanTitle}</news:title>
+      <news:keywords>${cleanKeywords}</news:keywords>
+    </news:news>`;
+
+    if (art.coverImage && art.coverImage.trim() !== "") {
+      let imgUrl = art.coverImage;
+      if (!imgUrl.startsWith("http")) {
+        const cleanPath = imgUrl.startsWith("/") ? imgUrl : `/${imgUrl}`;
+        imgUrl = `${baseUrl}${cleanPath}`;
+      }
+      xml += `
+    <image:image>
+      <image:loc>${escapeXml(imgUrl)}</image:loc>
+      <image:title>${cleanTitle}</image:title>
+    </image:image>`;
+    }
+
+    xml += `
+  </url>\n`;
+  });
+
+  xml += `</urlset>`;
+  return xml;
+}
+
 export function generateRobotsTxt(baseUrl: string): string {
   return `User-agent: *
 Allow: /
 
-Sitemap: ${baseUrl}/sitemap.xml`;
+Sitemap: ${baseUrl}/sitemap.xml
+Sitemap: ${baseUrl}/news-sitemap.xml`;
 }

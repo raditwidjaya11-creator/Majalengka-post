@@ -164,7 +164,8 @@ export default function Footer() {
           <ul className="space-y-1.5 text-xs text-gray-400">
             <li><a href="/terms" className="block py-1.5 hover:text-white transition-colors">Persyaratan Layanan</a></li>
             <li><a href="/privacy-policy" className="block py-1.5 hover:text-white transition-colors">Kebijakan Privasi</a></li>
-            <li><a href="#sitemap" className="block py-1.5 hover:text-white transition-colors">Sitemap XML</a></li>
+            <li><a href="/sitemap.xml" target="_blank" rel="noreferrer" className="block py-1.5 hover:text-white transition-colors">Sitemap XML Utama</a></li>
+            <li><a href="/news-sitemap.xml" target="_blank" rel="noreferrer" className="py-1.5 hover:text-white transition-colors flex items-center gap-1.5"><Globe className="w-3 h-3 text-red-500" /> Google News Sitemap</a></li>
             <li><a href="#rss" className="py-1.5 hover:text-white transition-colors flex items-center gap-1">
               <Rss className="w-3 h-3 text-amber-500" />
               Sindikasi RSS Feed

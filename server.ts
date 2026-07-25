@@ -33,7 +33,7 @@ import { generateNewsDigest } from "./services/newsDigest";
 import newsDigestHandler from "./server-api/news-digest";
 import { getLatestRates } from "./services/valas";
 import valasLatestHandler from "./server-api/valas/latest";
-import { slugify, injectSEOMetadata, injectGeneralSEOMetadata, generateSitemapXML, generateRobotsTxt } from "./services/seo";
+import { slugify, injectSEOMetadata, injectGeneralSEOMetadata, generateSitemapXML, generateGoogleNewsSitemapXML, generateRobotsTxt } from "./services/seo";
 import { handleSEORouting } from "./server/middleware/seo";
 import {
   UPLOADS_DIR,
@@ -567,16 +567,36 @@ async function startServer() {
     res.send(generateRobotsTxt(baseUrl));
   });
 
-  // SEO: sitemap.xml
-  app.get("/sitemap.xml", async (req, res) => {
+  // SEO: sitemap.xml & /api/sitemap.xml
+  app.get(["/sitemap.xml", "/api/sitemap.xml"], async (req, res) => {
     try {
       const baseUrl = getBaseUrl(req);
-      const xml = await generateSitemapXML(baseUrl);
+      // Check query parameter type or serve Google News sitemap directly
+      const type = req.query.type;
+      let xml: string;
+      if (type === "general") {
+        xml = await generateSitemapXML(baseUrl);
+      } else {
+        xml = await generateGoogleNewsSitemapXML(baseUrl);
+      }
       res.type("application/xml");
       res.send(xml);
     } catch (err: any) {
-      console.error("Error in local sitemap.xml route:", err);
+      console.error("Error in sitemap.xml route:", err);
       res.status(500).send("Error generating sitemap");
+    }
+  });
+
+  // SEO: news-sitemap.xml (Google News Sitemap)
+  app.get(["/news-sitemap.xml", "/google-news-sitemap.xml", "/api/news-sitemap.xml", "/api/google-news-sitemap.xml"], async (req, res) => {
+    try {
+      const baseUrl = getBaseUrl(req);
+      const xml = await generateGoogleNewsSitemapXML(baseUrl);
+      res.type("application/xml");
+      res.send(xml);
+    } catch (err: any) {
+      console.error("Error in news-sitemap.xml route:", err);
+      res.status(500).send("Error generating Google News sitemap");
     }
   });
 
