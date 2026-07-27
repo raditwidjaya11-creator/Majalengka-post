@@ -14,6 +14,7 @@ import HorizontalBannerManager from "./HorizontalBannerManager";
 import OpeningBannerManager from "./OpeningBannerManager";
 import { CompanyProfilePage } from "./CompanyProfile";
 import { uploadFileToSupabaseStorage } from "../lib/supabase";
+import ObsWebSocketControl from "./ObsWebSocketControl";
 // Removed SeoAnalyzer per user request: "jangan tampilkan sistem data se di dasshbor"
 
 
@@ -43,9 +44,9 @@ interface CMSDashboardProps {
   liveStreamActive?: boolean;
   liveStreamTitle?: string;
   liveStreamViewerCount?: number;
-  liveStreamType?: "youtube" | "camera" | "custom";
+  liveStreamType?: "youtube" | "camera" | "custom" | "obs_websocket";
   liveStreamUrl?: string;
-  onUpdateLiveStreamSettings?: (active: boolean, title: string, viewers: number, type: "youtube" | "camera" | "custom", url: string) => void;
+  onUpdateLiveStreamSettings?: (active: boolean, title: string, viewers: number, type: "youtube" | "camera" | "custom" | "obs_websocket", url: string) => void;
 }
 
 const COVER_PRESETS = [
@@ -276,7 +277,7 @@ export default function CMSDashboard({
   const [localLiveStreamActive, setLocalLiveStreamActive] = useState<boolean>(liveStreamActive);
   const [localLiveStreamTitle, setLocalLiveStreamTitle] = useState<string>(liveStreamTitle);
   const [localLiveStreamViewerCount, setLocalLiveStreamViewerCount] = useState<number>(liveStreamViewerCount);
-  const [localLiveStreamType, setLocalLiveStreamType] = useState<"youtube" | "camera" | "custom">(liveStreamType);
+  const [localLiveStreamType, setLocalLiveStreamType] = useState<"youtube" | "camera" | "custom" | "obs_websocket">(liveStreamType);
   const [localLiveStreamUrl, setLocalLiveStreamUrl] = useState<string>(liveStreamUrl);
   const [liveStreamSuccess, setLiveStreamSuccess] = useState<boolean>(false);
 
@@ -2877,11 +2878,21 @@ export default function CMSDashboard({
                     <option value="youtube">📺 YouTube Live Stream Embed</option>
                     <option value="camera">📹 Kamera Web Saya (Real Broadcast)</option>
                     <option value="custom">🔗 Video Custom / HLS (.m3u8 / .mp4)</option>
+                    <option value="obs_websocket">🎥 OBS Studio Remote Control (WebSocket v5)</option>
                   </select>
                 </div>
 
-                {/* Stream URL Input - Only shown if not camera */}
-                {localLiveStreamType !== "camera" && (
+                {/* OBS WebSocket Interactive Control Panel */}
+                {localLiveStreamActive && localLiveStreamType === "obs_websocket" && (
+                  <ObsWebSocketControl
+                    streamUrl={localLiveStreamUrl}
+                    onUpdateStreamUrl={(url) => setLocalLiveStreamUrl(url)}
+                    isActive={localLiveStreamActive}
+                  />
+                )}
+
+                {/* Stream URL Input - Only shown if not camera or obs_websocket */}
+                {localLiveStreamType !== "camera" && localLiveStreamType !== "obs_websocket" && (
                   <div className="space-y-4">
                     <div className="flex flex-col">
                       <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 font-sans">URL Tautan Siaran (Stream URL)</label>

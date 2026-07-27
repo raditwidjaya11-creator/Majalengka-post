@@ -268,7 +268,7 @@ export default function App() {
   const [liveStreamActive, setLiveStreamActive] = useState<boolean>(true);
   const [liveStreamTitle, setLiveStreamTitle] = useState<string>("Sidang Paripurna DPR & Peninjauan Lokasi Bencana Tol Majalengka");
   const [liveStreamViewerCount, setLiveStreamViewerCount] = useState<number>(1340);
-  const [liveStreamType, setLiveStreamType] = useState<"youtube" | "camera" | "custom">("youtube");
+  const [liveStreamType, setLiveStreamType] = useState<"youtube" | "camera" | "custom" | "obs_websocket">("youtube");
   const [liveStreamUrl, setLiveStreamUrl] = useState<string>("https://www.youtube.com/embed/live_stream?channel=UCz3A9S7AecK9BTh40S77Dug");
 
   const playerContainerRef = useRef<HTMLDivElement>(null);
@@ -403,7 +403,7 @@ export default function App() {
     active: boolean, 
     title: string, 
     viewers: number, 
-    type: "youtube" | "camera" | "custom" = "youtube", 
+    type: "youtube" | "camera" | "custom" | "obs_websocket" = "youtube", 
     url: string = ""
   ) => {
     setLiveStreamActive(active);
@@ -2277,7 +2277,7 @@ export default function App() {
                         LIVE
                       </span>
                       <span className="bg-black/60 text-slate-200 text-[9px] font-black uppercase px-2 py-1 rounded-md tracking-wider border border-slate-800">
-                        {liveStreamType === "camera" ? "WEBCAM PORTAL" : liveStreamType === "youtube" ? "YOUTUBE BROADCAST" : "CUSTOM STREAM"}
+                        {liveStreamType === "camera" ? "WEBCAM PORTAL" : liveStreamType === "youtube" ? "YOUTUBE BROADCAST" : liveStreamType === "obs_websocket" ? "OBS STUDIO REMOTE" : "CUSTOM STREAM"}
                       </span>
                     </div>
 
