@@ -27,7 +27,7 @@ import { slugify } from "./utils/slugify";
 import { safeLocalStorage } from "./lib/safeStorage";
 import { getYouTubeEmbedUrl } from "./lib/youtube";
 import { requestNotificationPermission, getNotificationPermissionStatus, showNewArticleNotification } from "./utils/notification";
-import logoImg from "./assets/images/logo.png";
+import logoImg from "./assets/logo.png";
 import { 
   isSupabaseConfigured,
   getIsSupabaseConfigured,
