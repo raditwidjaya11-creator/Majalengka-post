@@ -2,7 +2,7 @@ import React from "react";
 import { Helmet } from "react-helmet-async";
 import { Article } from "../types";
 import { slugify } from "../utils/slugify";
-import logoImg from "../assets/images/majalengka_post_logo_1783851016975.jpg";
+import logoImg from "../assets/logo.png";
 
 interface ArticleHelmetProps {
   article: Article;
@@ -14,7 +14,7 @@ export const ArticleHelmet: React.FC<ArticleHelmetProps> = ({ article, customCan
     if (typeof window !== "undefined" && window.location.origin) {
       return window.location.origin;
     }
-    return "https://majalengkapost.com";
+    return "https://www.majalengkapost.web.id";
   };
 
   const origin = getSiteOrigin();
