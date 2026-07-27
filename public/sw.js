@@ -15,8 +15,9 @@ const ALL_CACHES = [
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/manifest.json',
-  '/favicon.png',
+  '/manifest.webmanifest',
+  '/favicon-16x16.png',
+  '/favicon-32x32.png',
   '/favicon.ico',
   '/apple-touch-icon.png',
   '/android-chrome-192x192.png',
