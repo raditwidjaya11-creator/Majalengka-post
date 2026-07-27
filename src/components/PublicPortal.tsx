@@ -16,6 +16,7 @@ import { CATEGORIES, SHOLAT_SCHEDULE, CURRENCY_RATES, STOCK_MARKET, INITIAL_COMM
 import { slugify } from "../utils/slugify";
 import { getYouTubeEmbedUrl } from "../lib/youtube";
 import { safeLocalStorage } from "../lib/safeStorage";
+import ArticleSkeleton from "./ArticleSkeleton";
 
 const calculateReadingTime = (content?: string, subTitle?: string, title?: string): string => {
   const text = `${title || ""} ${subTitle || ""} ${(content || "").replace(/<[^>]*>/g, " ")}`;
@@ -36,6 +37,8 @@ interface PublicPortalProps {
   onSelectArticle: (article: Article | null) => void;
   activePoll: Poll;
   onVotePoll: (optionId: string) => void;
+  isArticleLoading?: boolean;
+  isNotFound?: boolean;
 }
 
 const cardContainerVariants = {
@@ -73,6 +76,8 @@ export default function PublicPortal({
   onSelectArticle,
   activePoll,
   onVotePoll,
+  isArticleLoading = false,
+  isNotFound = false,
 }: PublicPortalProps) {
   
   // Helper for safe window origin detection inside iframes
@@ -704,8 +709,72 @@ export default function PublicPortal({
           </div>
         )}
 
-      {/* 2. Main Layout routing (Article Detail vs Homepage Grid) */}
-      {selectedArticle ? (
+      {/* 2. Main Layout routing (Skeleton Loading vs 404 Not Found vs Article Detail vs Homepage Grid) */}
+      {isArticleLoading ? (
+        <ArticleSkeleton />
+      ) : isNotFound ? (
+        // ================= 404 ARTICLE NOT FOUND PAGE =================
+        <div className="max-w-4xl mx-auto my-8 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-8 text-center shadow-lg animate-fade-in">
+          <Helmet>
+            <title>404 - Artikel Tidak Ditemukan | Majalengka Post</title>
+            <meta name="robots" content="noindex, follow" />
+          </Helmet>
+
+          <div className="w-20 h-20 mx-auto bg-red-100 dark:bg-red-950/50 rounded-full flex items-center justify-center text-red-600 mb-4">
+            <AlertTriangle className="w-10 h-10" />
+          </div>
+
+          <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-2 uppercase tracking-tight">
+            404 - Artikel Tidak Ditemukan
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 max-w-lg mx-auto mb-6">
+            Maaf, artikel dengan tautan ini tidak ditemukan, mungkin telah dipindahkan atau judul artikel telah diperbarui.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8">
+            <button
+              type="button"
+              onClick={() => {
+                onSelectArticle(null);
+                onSelectCategory("");
+                window.history.pushState({}, "", "/");
+                window.dispatchEvent(new Event("popstate"));
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-full shadow-md transition-all hover:scale-105 cursor-pointer"
+            >
+              ← Kembali ke Beranda
+            </button>
+          </div>
+
+          {/* Recommended latest news section */}
+          {articles && articles.length > 0 && (
+            <div className="text-left border-t border-gray-100 dark:border-gray-800 pt-6">
+              <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">
+                Berita Terkini Rekomendasi Redaksi
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {articles.slice(0, 6).map((art) => (
+                  <div
+                    key={art.id}
+                    onClick={() => {
+                      onSelectArticle(art);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800 cursor-pointer hover:border-red-500/50 transition-all group"
+                  >
+                    <span className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase">
+                      {art.category}
+                    </span>
+                    <h4 className="text-xs font-bold text-gray-900 dark:text-white line-clamp-2 mt-1 group-hover:text-red-600 transition-colors">
+                      {art.title}
+                    </h4>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : selectedArticle ? (
         
         // ================= ARTICLE DETAIL PAGE =================
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">

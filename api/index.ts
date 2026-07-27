@@ -85,6 +85,14 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use((req, res, next) => {
+  console.log(`[Vercel Route Debug] ${req.method} ${req.url} | Referrer: ${req.headers["referer"] || "none"} | UA: ${req.headers["user-agent"] || "none"}`);
+  if (req.url === "/") {
+    console.warn(`[Vercel Route Debug] Homepage requested (Referrer: ${req.headers["referer"] || "none"})`);
+  }
+  next();
+});
+
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 

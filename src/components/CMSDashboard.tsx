@@ -4,7 +4,7 @@ import {
   Settings, RefreshCw, Sparkles, Check, Copy, User, HelpCircle, 
   MapPin, Clock, Eye, AlertCircle, Trash, Search, Folder, 
   Tag as TagIcon, CheckSquare, Bell, Megaphone, Smartphone, DollarSign,
-  Briefcase, Activity, Calendar, ShieldCheck, ChevronRight, Upload, Globe
+  Briefcase, Activity, Calendar, ShieldCheck, ChevronRight, Upload, Globe, Newspaper
 } from "lucide-react";
 import { Article, ArticleStatus, UserRole, MediaItem, AdBanner, InternalNotification, AuditLog, ValasRate, OpeningBanner } from "../types";
 import { CATEGORIES, REALTIME_ANALYTICS } from "../mockData";
@@ -2728,6 +2728,42 @@ export default function CMSDashboard({
                 <span>{pushSent ? "Sedang Menyiarkan..." : "Kirim Siaran Notifikasi"}</span>
               </button>
             </form>
+
+            {/* Quick Select Latest Articles */}
+            <div className="border-t border-gray-100 dark:border-gray-800 pt-5 mt-4">
+              <h4 className="text-xs font-black text-gray-800 dark:text-gray-200 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <Newspaper className="w-4 h-4 text-red-600" />
+                Pilih Berita Terbaru Untuk Disiarkan Notifikasi
+              </h4>
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                {articles.filter(a => a.status === ArticleStatus.PUBLISHED).slice(0, 8).map((art) => (
+                  <div
+                    key={art.id}
+                    className="p-3 bg-gray-50 dark:bg-gray-950 border border-gray-150 dark:border-gray-800 rounded-xl flex items-center justify-between gap-3 text-xs"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="bg-red-100 dark:bg-red-950 text-red-600 text-[9px] font-black px-1.5 py-0.2 rounded uppercase">
+                          {art.category || "Berita"}
+                        </span>
+                        <span className="text-[10px] text-gray-400">{art.date}</span>
+                      </div>
+                      <p className="font-bold text-gray-800 dark:text-gray-200 truncate">{art.title}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPushTitle(`[${art.category || "TERBARU"}] ${art.title}`);
+                        setPushBody(art.summary || art.subTitle || `${art.location}: Baca selengkapnya berita terbaru di Majalengka Post.`);
+                      }}
+                      className="shrink-0 bg-red-50 dark:bg-red-950/60 hover:bg-red-600 hover:text-white text-red-600 dark:text-red-400 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-red-200 dark:border-red-900 transition-colors"
+                    >
+                      Isi Notifikasi
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import HeaderNav from "./components/HeaderNav";
 import Footer from "./components/Footer";
@@ -202,8 +203,15 @@ export default function App() {
   const [showCategoryModal, setShowCategoryModal] = useState<boolean>(false);
   const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
   
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [isMobileViewport, setIsMobileViewport] = useState<boolean>(false);
-  const [currentPath, setCurrentPath] = useState<string>(window.location.pathname);
+  const [currentPath, setCurrentPath] = useState<string>(() => location.pathname);
+  const [isArticleLoading, setIsArticleLoading] = useState<boolean>(() => {
+    return location.pathname.startsWith("/artikel/") || location.pathname.startsWith("/berita/");
+  });
+  const [isNotFound, setIsNotFound] = useState<boolean>(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -216,10 +224,7 @@ export default function App() {
 
   // Sync state with location change & intercept global clicks for path-based SPA navigation
   useEffect(() => {
-    const handleLocationChange = () => {
-      setCurrentPath(window.location.pathname);
-    };
-    window.addEventListener("popstate", handleLocationChange);
+    setCurrentPath(location.pathname);
     
     const handleGlobalClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -228,18 +233,16 @@ export default function App() {
         const href = anchor.getAttribute("href");
         if (href && href.startsWith("/") && !href.startsWith("/api/")) {
           e.preventDefault();
-          window.history.pushState({}, "", href);
-          window.dispatchEvent(new PopStateEvent("popstate"));
+          navigate(href);
         }
       }
     };
     document.addEventListener("click", handleGlobalClick);
 
     return () => {
-      window.removeEventListener("popstate", handleLocationChange);
       document.removeEventListener("click", handleGlobalClick);
     };
-  }, []);
+  }, [location.pathname, navigate]);
 
   // Supabase Integration States
   const [supabaseStatus, setSupabaseStatus] = useState<"idle" | "syncing" | "success" | "error" | "missing_tables" | "unconfigured">("idle");
@@ -845,6 +848,26 @@ export default function App() {
   const publishedIdsRef = React.useRef<Set<string>>(new Set());
   const isInitialLoadRef = React.useRef<boolean>(true);
 
+  // Synchronize internal notifications state with current articles
+  useEffect(() => {
+    if (!articles || articles.length === 0) return;
+    const generatedNotifs: InternalNotification[] = articles.map((article) => {
+      const isPub = article.status === ArticleStatus.PUBLISHED;
+      return {
+        id: `notif-art-${article.id}`,
+        title: isPub ? `Berita Terbit: ${article.category || "Utama"}` : `Artikel: ${article.title}`,
+        message: isPub
+          ? `[${article.category}] ${article.location}: "${article.title}" oleh ${article.author}.`
+          : `Artikel "${article.title}" oleh ${article.author} dalam status ${article.status}.`,
+        timestamp: `${article.date || "Hari ini"} ${article.time || "terbaru"}`,
+        category: "workflow" as const,
+        read: false,
+        articleId: article.id,
+      };
+    });
+    setNotifications(generatedNotifs);
+  }, [articles]);
+
   useEffect(() => {
     const currentPublishedIds = new Set(
       articles
@@ -1098,54 +1121,68 @@ export default function App() {
   };
 
 
+  // Logging helper for router debugging
+  const logRouteEvent = (source: string, targetPath: string, extra?: any) => {
+    console.log(`[Client Router Debug - ${source}] Target: "${targetPath}" | Current URL: "${location.pathname}"`, extra || "");
+    if (targetPath === "/") {
+      console.warn(`[Client Router Debug] Route changed to "/" from "${location.pathname}" via ${source}`);
+    }
+  };
+
   // 5. URL Router & Slug-based URL updates when article selection or category selection changes
   useEffect(() => {
     try {
       if (selectedArticle) {
         const slug = slugify(selectedArticle.title);
         const targetPath = `/artikel/${slug}`;
-        if (window.location.pathname !== targetPath) {
-          window.history.pushState({ articleId: selectedArticle.id }, "", targetPath);
+        if (location.pathname !== targetPath) {
+          logRouteEvent("selectedArticleSync", targetPath);
+          navigate(targetPath, { state: { articleId: selectedArticle.id } });
           setCurrentPath(targetPath);
         }
       } else if (currentCategory) {
         const targetPath = `/kategori/${currentCategory.toLowerCase()}`;
-        if (window.location.pathname !== targetPath) {
-          window.history.pushState({}, "", targetPath);
+        if (location.pathname !== targetPath) {
+          logRouteEvent("currentCategorySync", targetPath);
+          navigate(targetPath);
           setCurrentPath(targetPath);
-        }
-      } else {
-        if (window.location.pathname !== "/" && !window.location.pathname.startsWith("/api/")) {
-          if (
-            window.location.pathname !== "/terms" && 
-            window.location.pathname !== "/privacy-policy" &&
-            !window.location.pathname.startsWith("/kategori/")
-          ) {
-            window.history.pushState({}, "", "/");
-            setCurrentPath("/");
-          }
         }
       }
     } catch (e) {
-      console.warn("Failed to update history state (could be running in a sandboxed iframe):", e);
+      console.warn("Failed to update router state:", e);
     }
-  }, [selectedArticle, currentCategory]);
+  }, [selectedArticle, currentCategory, location.pathname, navigate]);
 
   // Initial load or Back/Forward navigation sync
   useEffect(() => {
     const parseUrlAndRoute = () => {
-      const path = window.location.pathname;
+      const path = location.pathname;
       setCurrentPath(path);
+      logRouteEvent("parseUrlAndRoute", path);
 
-      // 1. Article matching
+      // 1. Article matching (/artikel/:slug or /berita/:slug)
       const match = path.match(/^\/(artikel|berita)\/([^/]+)$/);
       if (match) {
-        const slug = match[2];
+        const slug = decodeURIComponent(match[2]);
         const found = articles.find(a => slugify(a.title) === slug);
         if (found) {
           setSelectedArticle(found);
+          setIsNotFound(false);
+          setIsArticleLoading(false);
           if (found.category) {
             setCurrentCategory(found.category);
+          }
+          return;
+        } else {
+          // If Supabase is still loading data, keep loading skeleton
+          if (supabaseStatus === "syncing") {
+            setIsArticleLoading(true);
+            setIsNotFound(false);
+          } else {
+            // Data finished loading and slug was not found
+            setSelectedArticle(null);
+            setIsNotFound(true);
+            setIsArticleLoading(false);
           }
           return;
         }
@@ -1155,11 +1192,13 @@ export default function App() {
       const categoryMatch = path.match(/^\/kategori\/([^/]+)$/);
       if (categoryMatch) {
         const categorySlug = decodeURIComponent(categoryMatch[1]).toLowerCase();
-        const availableCategories = ["Nasional", "Politik", "Daerah", "Ekonomi", "Teknologi", "Kesehatan", "Olahraga", "Hiburan", "Lifestyle", "Religi", "Budaya", "Opini", "Video"];
+        const availableCategories = ["Nasional", "Politik", "Pemerintahan", "Daerah", "Hukum", "Kriminal", "Ekonomi", "Bisnis", "Teknologi", "Kesehatan", "Olahraga", "Hiburan", "Lifestyle", "Religi", "Budaya", "Opini", "Video"];
         const foundCategory = availableCategories.find(c => c.toLowerCase() === categorySlug);
         if (foundCategory) {
           setCurrentCategory(foundCategory);
           setSelectedArticle(null);
+          setIsNotFound(false);
+          setIsArticleLoading(false);
           if (foundCategory === "Video") {
             setActiveBottomTab("video");
           } else {
@@ -1168,14 +1207,24 @@ export default function App() {
           return;
         }
       }
+
+      // 3. Static Pages: /terms, /privacy-policy
+      if (path === "/terms" || path === "/privacy-policy") {
+        setSelectedArticle(null);
+        setIsNotFound(false);
+        setIsArticleLoading(false);
+        return;
+      }
       
-      // 3. Fallback query parameters: ?artikel=slug or ?category=name or ?livetv=true
-      const params = new URLSearchParams(window.location.search);
+      // 4. Fallback query parameters: ?artikel=slug or ?category=name or ?livetv=true
+      const params = new URLSearchParams(location.search);
       const paramSlug = params.get("artikel") || params.get("berita");
       if (paramSlug) {
         const found = articles.find(a => slugify(a.title) === paramSlug);
         if (found) {
           setSelectedArticle(found);
+          setIsNotFound(false);
+          setIsArticleLoading(false);
           if (found.category) {
             setCurrentCategory(found.category);
           }
@@ -1185,11 +1234,13 @@ export default function App() {
 
       const paramCategory = params.get("category") || params.get("kategori");
       if (paramCategory) {
-        const availableCategories = ["Nasional", "Politik", "Daerah", "Ekonomi", "Teknologi", "Kesehatan", "Olahraga", "Hiburan", "Lifestyle", "Religi", "Budaya", "Opini", "Video"];
+        const availableCategories = ["Nasional", "Politik", "Pemerintahan", "Daerah", "Hukum", "Kriminal", "Ekonomi", "Bisnis", "Teknologi", "Kesehatan", "Olahraga", "Hiburan", "Lifestyle", "Religi", "Budaya", "Opini", "Video"];
         const foundCategory = availableCategories.find(c => c.toLowerCase() === paramCategory.toLowerCase());
         if (foundCategory) {
           setCurrentCategory(foundCategory);
           setSelectedArticle(null);
+          setIsNotFound(false);
+          setIsArticleLoading(false);
           if (foundCategory === "Video") {
             setActiveBottomTab("video");
           } else {
@@ -1204,7 +1255,10 @@ export default function App() {
         setShowLiveStreamModal(true);
       }
 
+      // Root / Homepage
       setSelectedArticle(null);
+      setIsNotFound(false);
+      setIsArticleLoading(false);
       if (path === "/") {
         setCurrentCategory("");
         setActiveBottomTab("beranda");
@@ -1212,9 +1266,7 @@ export default function App() {
     };
 
     parseUrlAndRoute();
-    window.addEventListener("popstate", parseUrlAndRoute);
-    return () => window.removeEventListener("popstate", parseUrlAndRoute);
-  }, [articles]);
+  }, [location.pathname, location.search, articles, supabaseStatus]);
 
   // Helper lists
   const breakingNewsList = articles
@@ -1553,17 +1605,38 @@ export default function App() {
     "author": [{
       "@type": "Person",
       "name": selectedArticle.author || "Redaksi Majalengka Post",
-      "url": `${getSiteOrigin()}/`
+      "jobTitle": "Jurnalis / Redaksi",
+      "url": selectedArticle.author
+        ? `${getSiteOrigin()}/#author-${slugify(selectedArticle.author)}`
+        : `${getSiteOrigin()}/#author-redaksi`,
+      "sameAs": [
+        `${getSiteOrigin()}/`,
+        "https://facebook.com/majalengkapost",
+        "https://twitter.com/majalengkapost",
+        "https://instagram.com/majalengkapost"
+      ]
     }],
     "publisher": {
       "@type": "NewsMediaOrganization",
       "@id": `${getSiteOrigin()}/#organization`,
       "name": "Majalengka Post",
+      "url": `${getSiteOrigin()}/`,
       "logo": {
         "@type": "ImageObject",
         "url": resolvedLogoUrl
-      }
+      },
+      "sameAs": [
+        "https://facebook.com/majalengkapost",
+        "https://twitter.com/majalengkapost",
+        "https://instagram.com/majalengkapost"
+      ]
     },
+    "sameAs": [
+      helmetCanonical,
+      "https://facebook.com/majalengkapost",
+      "https://twitter.com/majalengkapost",
+      "https://instagram.com/majalengkapost"
+    ],
     "keywords": selectedArticle.seo?.keywords || (Array.isArray(selectedArticle.tags) ? selectedArticle.tags.join(", ") : "") || "majalengka, berita",
     "articleBody": selectedArticle.content || "",
     "wordCount": selectedArticle.content ? selectedArticle.content.trim().split(/\s+/).length : 0,
@@ -1580,15 +1653,13 @@ export default function App() {
             setCurrentCategory(cat);
             setSelectedArticle(null);
             setSearchQuery("");
-            window.history.pushState({}, "", "/");
-            window.dispatchEvent(new PopStateEvent("popstate"));
+            navigate("/");
           }}
           searchQuery={searchQuery}
           onSearchChange={(q) => {
             setSearchQuery(q);
             setSelectedArticle(null);
-            window.history.pushState({}, "", "/");
-            window.dispatchEvent(new PopStateEvent("popstate"));
+            navigate("/");
           }}
           darkMode={darkMode}
           onToggleDarkMode={() => setDarkMode(!darkMode)}
@@ -1614,6 +1685,9 @@ export default function App() {
           notificationPermission={notificationPermission}
           onToggleNotifications={handleToggleNotifications}
           onWatchLiveStream={() => setShowLiveStreamModal(true)}
+          articles={articles}
+          notifications={notifications}
+          onSelectArticle={setSelectedArticle}
         />
 
         {/* Float/Absolute Theme Settings trigger button */}
@@ -1649,13 +1723,11 @@ export default function App() {
         <div className="flex-1 w-full max-w-4xl mx-auto px-4 py-8 animate-fade-in">
           {currentPath === "/terms" ? (
             <TermsPage onBackHome={() => {
-              window.history.pushState({}, "", "/");
-              window.dispatchEvent(new PopStateEvent("popstate"));
+              navigate("/");
             }} />
           ) : (
             <PrivacyPolicyPage onBackHome={() => {
-              window.history.pushState({}, "", "/");
-              window.dispatchEvent(new PopStateEvent("popstate"));
+              navigate("/");
             }} />
           )}
         </div>
@@ -1986,6 +2058,9 @@ export default function App() {
           notificationPermission={notificationPermission}
           onToggleNotifications={handleToggleNotifications}
           onWatchLiveStream={() => setShowLiveStreamModal(true)}
+          articles={articles}
+          notifications={notifications}
+          onSelectArticle={setSelectedArticle}
         />
 
         {/* Float/Absolute Theme Settings trigger button */}

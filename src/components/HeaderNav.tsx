@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { Search, Flame, ShieldAlert, MonitorPlay, Moon, Sun, Menu, X, Radio, Newspaper, Lock, Unlock, KeyRound, Bell, BellRing } from "lucide-react";
-import { motion } from "motion/react";
+import { Search, Flame, ShieldAlert, MonitorPlay, Moon, Sun, Menu, X, Radio, Newspaper, Lock, Unlock, KeyRound, Bell, BellRing, Check, Clock, ChevronRight, Megaphone, Sparkles } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 import { CATEGORIES } from "../mockData";
-import { UserRole, ValasRate } from "../types";
+import { UserRole, ValasRate, Article, InternalNotification } from "../types";
 import logoImg from "../assets/images/majalengka_post_logo_1783851016975.jpg";
 
 interface HeaderNavProps {
@@ -25,6 +25,9 @@ interface HeaderNavProps {
   notificationPermission: "default" | "granted" | "denied" | "unsupported";
   onToggleNotifications: () => void;
   onWatchLiveStream?: () => void;
+  articles?: Article[];
+  notifications?: InternalNotification[];
+  onSelectArticle?: (article: Article | null) => void;
 }
 
 export default function HeaderNav({
@@ -47,9 +50,13 @@ export default function HeaderNav({
   notificationPermission,
   onToggleNotifications,
   onWatchLiveStream,
+  articles = [],
+  notifications = [],
+  onSelectArticle,
 }: HeaderNavProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showRolesDropdown, setShowRolesDropdown] = useState(false);
+  const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
   const formattedDate = new Date().toLocaleDateString("id-ID", {
     weekday: "long",
@@ -154,31 +161,114 @@ export default function HeaderNav({
               {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
 
-            {/* Notification Bell Toggle */}
+            {/* Notification Bell Dropdown Trigger */}
             {notificationPermission !== "unsupported" && (
-              <button
-                id="btn-push-notifications"
-                onClick={onToggleNotifications}
-                className={`p-2 rounded-lg border transition-colors relative ${
-                  isSubscribed && notificationPermission === "granted"
-                    ? "border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20"
-                    : "border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-                }`}
-                title={
-                  isSubscribed && notificationPermission === "granted"
-                    ? "Notifikasi Artikel Baru Aktif"
-                    : "Aktifkan Notifikasi Artikel Baru"
-                }
-              >
-                {isSubscribed && notificationPermission === "granted" ? (
-                  <BellRing className="w-4 h-4 text-red-600 dark:text-red-400 animate-pulse" />
-                ) : (
-                  <Bell className="w-4 h-4" />
+              <div className="relative">
+                <button
+                  id="btn-push-notifications"
+                  onClick={() => setShowNotificationsDropdown(!showNotificationsDropdown)}
+                  className={`p-2 rounded-lg border transition-colors relative cursor-pointer ${
+                    isSubscribed && notificationPermission === "granted"
+                      ? "border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20"
+                      : "border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  }`}
+                  title="Lihat Notifikasi Artikel Terbaru"
+                >
+                  {isSubscribed && notificationPermission === "granted" ? (
+                    <BellRing className="w-4 h-4 text-red-600 dark:text-red-400 animate-pulse" />
+                  ) : (
+                    <Bell className="w-4 h-4" />
+                  )}
+                  {articles.length > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full min-w-[16px] text-center shadow-xs">
+                      {Math.min(articles.length, 99)}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notifications Dropdown Popover */}
+                {showNotificationsDropdown && (
+                  <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl z-50 overflow-hidden animate-fade-in">
+                    {/* Header bar */}
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Megaphone className="w-4 h-4 text-red-600" />
+                        <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">
+                          Notifikasi Artikel Terbaru
+                        </h4>
+                      </div>
+                      <button
+                        onClick={onToggleNotifications}
+                        className={`text-[10px] font-bold px-2 py-1 rounded-lg border transition-all ${
+                          isSubscribed && notificationPermission === "granted"
+                            ? "bg-red-50 dark:bg-red-950 text-red-600 border-red-200 dark:border-red-900"
+                            : "bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700"
+                        }`}
+                        title="Klik untuk mengubah langganan push notifikasi browser"
+                      >
+                        {isSubscribed && notificationPermission === "granted" ? "Push: Aktif" : "Aktifkan Push"}
+                      </button>
+                    </div>
+
+                    {/* Articles Notification Items List */}
+                    <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-850">
+                      {articles.length === 0 ? (
+                        <div className="p-6 text-center text-xs text-slate-400">
+                          Belum ada artikel terbaru tersedia.
+                        </div>
+                      ) : (
+                        articles.slice(0, 10).map((art) => (
+                          <div
+                            key={art.id}
+                            onClick={() => {
+                              if (onSelectArticle) {
+                                onSelectArticle(art);
+                              }
+                              setShowNotificationsDropdown(false);
+                            }}
+                            className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors cursor-pointer flex gap-3 group"
+                          >
+                            <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0">
+                              <img
+                                src={art.coverImage || null}
+                                alt=""
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                loading="lazy"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <span className="bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 text-[9px] font-black px-1.5 py-0.2 rounded uppercase">
+                                  {art.category || "BERITA"}
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-mono">
+                                  {art.time || "terbaru"}
+                                </span>
+                              </div>
+                              <h5 className="text-xs font-bold text-slate-800 dark:text-slate-150 line-clamp-2 leading-snug group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+                                {art.title}
+                              </h5>
+                              <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                                Oleh {art.author} • {art.location}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="p-2.5 bg-slate-50 dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800 text-center">
+                      <button
+                        onClick={() => setShowNotificationsDropdown(false)}
+                        className="text-[10px] font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white uppercase tracking-wider"
+                      >
+                        Tutup Notifikasi
+                      </button>
+                    </div>
+                  </div>
                 )}
-                <span className={`absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${
-                  isSubscribed && notificationPermission === "granted" ? "bg-red-600" : "bg-gray-400"
-                }`} />
-              </button>
+              </div>
             )}
 
             {isRedaksiUnlocked ? (

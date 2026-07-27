@@ -57,6 +57,15 @@ import { Server as SocketIOServer } from "socket.io";
 const app = express();
 const PORT = parseInt(process.env.PORT || "3000", 10);
 
+app.use((req, res, next) => {
+  const originalUrl = req.originalUrl || req.url;
+  console.log(`[Server Route Debug] ${req.method} ${originalUrl} | Referrer: ${req.headers["referer"] || "none"} | UA: ${req.headers["user-agent"] || "none"}`);
+  if (originalUrl === "/") {
+    console.warn(`[Server Route Debug] Homepage requested directly from ${req.ip} (Referrer: ${req.headers["referer"] || "none"})`);
+  }
+  next();
+});
+
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
