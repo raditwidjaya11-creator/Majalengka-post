@@ -37,6 +37,9 @@ class OBSBackendService {
   private io: SocketIOServer | null = null;
   private isConnected = false;
   private isConnecting = false;
+  private wasConnected = false;
+  private consecutiveFailures = 0;
+  private maxConsecutiveFailures = 3;
   private autoReconnectTimer: any = null;
 
   // Connection settings loaded from .env or configured dynamically
@@ -119,23 +122,25 @@ class OBSBackendService {
 
   private setupListeners() {
     this.obs.on("ConnectionClosed", (error) => {
-      console.warn("[OBS Service] Connection closed:", error?.message || error);
+      const msg = error?.message || (typeof error === "string" ? error : "Koneksi ke OBS Studio terputus");
+      console.warn("[OBS Service] Connection closed:", msg);
       this.isConnected = false;
       this.isConnecting = false;
       this.state.connected = false;
       this.state.connecting = false;
-      this.state.lastError = error?.message || "Koneksi ke OBS Studio terputus";
+      this.state.lastError = msg;
       this.stopTelemetry();
       this.broadcastState();
-      this.broadcastEvent("ConnectionClosed", { message: "Disconnnected from OBS" });
+      this.broadcastEvent("ConnectionClosed", { message: "Disconnected from OBS" });
 
-      // Trigger auto reconnect after 5 seconds
+      // Trigger auto reconnect only if previously connected and retries remain
       this.scheduleAutoReconnect();
     });
 
-    this.obs.on("ConnectionError", (err) => {
-      console.error("[OBS Service] Connection error:", err);
-      this.state.lastError = err?.message || "Gagal menghubungkan ke OBS WebSocket";
+    this.obs.on("ConnectionError", (err: any) => {
+      const msg = err?.message || err?.comment || "Gagal menghubungkan ke OBS WebSocket";
+      console.warn("[OBS Service] Connection error:", msg);
+      this.state.lastError = msg;
       this.broadcastState();
     });
 
@@ -199,13 +204,26 @@ class OBSBackendService {
 
   private scheduleAutoReconnect() {
     if (this.autoReconnectTimer) clearTimeout(this.autoReconnectTimer);
+    
+    // Do not attempt auto-reconnect if we never successfully connected,
+    // or if we have exceeded the max consecutive failure limit.
+    if (!this.wasConnected || this.consecutiveFailures >= this.maxConsecutiveFailures) {
+      console.info("[OBS Service] Auto-reconnect stopped (max retries reached or server offline).");
+      return;
+    }
+
     this.autoReconnectTimer = setTimeout(() => {
-      console.log("[OBS Service] Attempting auto-reconnect...");
+      console.log(`[OBS Service] Attempting auto-reconnect (attempt ${this.consecutiveFailures + 1}/${this.maxConsecutiveFailures})...`);
       this.connect().catch(() => {});
     }, 5000);
   }
 
   public async connect(customHost?: string, customPort?: number, customPassword?: string): Promise<boolean> {
+    // If explicitly called with custom credentials, reset failure counter
+    if (customHost !== undefined || customPort !== undefined || customPassword !== undefined) {
+      this.consecutiveFailures = 0;
+    }
+
     if (customHost) this.host = customHost;
     if (customPort) this.port = customPort;
     if (customPassword !== undefined) this.password = customPassword;
@@ -233,6 +251,8 @@ class OBSBackendService {
 
       this.isConnected = true;
       this.isConnecting = false;
+      this.wasConnected = true;
+      this.consecutiveFailures = 0;
       this.state.connected = true;
       this.state.connecting = false;
       this.state.obsVersion = obsWebSocketVersion || "5.0";
@@ -251,10 +271,11 @@ class OBSBackendService {
     } catch (err: any) {
       this.isConnected = false;
       this.isConnecting = false;
+      this.consecutiveFailures++;
       this.state.connected = false;
       this.state.connecting = false;
       this.state.lastError = err?.comment || err?.message || "Gagal terhubung ke OBS WebSocket Server";
-      console.error("[OBS Service] Connect error:", this.state.lastError);
+      console.warn(`[OBS Service] Connect error (${address}):`, this.state.lastError);
       this.broadcastState();
       return false;
     }

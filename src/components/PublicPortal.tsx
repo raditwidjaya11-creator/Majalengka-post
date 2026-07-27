@@ -17,6 +17,7 @@ import { slugify } from "../utils/slugify";
 import { getYouTubeEmbedUrl } from "../lib/youtube";
 import { safeLocalStorage } from "../lib/safeStorage";
 import ArticleSkeleton from "./ArticleSkeleton";
+import ArticleHelmet from "./ArticleHelmet";
 
 const calculateReadingTime = (content?: string, subTitle?: string, title?: string): string => {
   const text = `${title || ""} ${subTitle || ""} ${(content || "").replace(/<[^>]*>/g, " ")}`;
@@ -778,27 +779,7 @@ export default function PublicPortal({
         
         // ================= ARTICLE DETAIL PAGE =================
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <Helmet>
-            <title>{selectedArticle.seo?.title || selectedArticle.title} | Majalengka Post</title>
-            <meta name="description" content={selectedArticle.seo?.description || selectedArticle.summary || selectedArticle.subTitle || "Berita terpercaya dari Majalengka Post."} />
-            <meta name="keywords" content={selectedArticle.seo?.keywords || (Array.isArray(selectedArticle.tags) ? selectedArticle.tags.join(", ") : "") || "majalengka, berita"} />
-            <link rel="canonical" href={`${getSiteOrigin()}/artikel/${slugify(selectedArticle.title)}`} />
-            
-            {/* Open Graph / Facebook */}
-            <meta property="og:type" content="article" />
-            <meta property="og:site_name" content="Majalengka Post" />
-            <meta property="og:title" content={selectedArticle.seo?.title || selectedArticle.title} />
-            <meta property="og:description" content={selectedArticle.seo?.description || selectedArticle.summary || selectedArticle.subTitle || "Berita terpercaya dari Majalengka Post."} />
-            <meta property="og:image" content={selectedArticle.coverImage ? (selectedArticle.coverImage.startsWith("http") ? selectedArticle.coverImage : `${getSiteOrigin()}${selectedArticle.coverImage.startsWith("/") ? "" : "/"}${selectedArticle.coverImage}`) : `${getSiteOrigin()}/default-share.jpg`} />
-            <meta property="og:url" content={`${getSiteOrigin()}/artikel/${slugify(selectedArticle.title)}`} />
-            <meta property="og:locale" content="id_ID" />
-            
-            {/* Twitter */}
-            <meta name="twitter:card" content="summary_large_image" />
-            <meta name="twitter:title" content={selectedArticle.seo?.title || selectedArticle.title} />
-            <meta name="twitter:description" content={selectedArticle.seo?.description || selectedArticle.summary || selectedArticle.subTitle || "Berita terpercaya dari Majalengka Post."} />
-            <meta name="twitter:image" content={selectedArticle.coverImage ? (selectedArticle.coverImage.startsWith("http") ? selectedArticle.coverImage : `${getSiteOrigin()}${selectedArticle.coverImage.startsWith("/") ? "" : "/"}${selectedArticle.coverImage}`) : `${getSiteOrigin()}/default-share.jpg`} />
-          </Helmet>
+          <ArticleHelmet article={selectedArticle} />
           
           
           {/* Main Article column */}

@@ -4,6 +4,7 @@ import { Helmet } from "react-helmet-async";
 import HeaderNav from "./components/HeaderNav";
 import Footer from "./components/Footer";
 import PublicPortal from "./components/PublicPortal";
+import ArticleHelmet from "./components/ArticleHelmet";
 import CMSDashboard from "./components/CMSDashboard";
 import MobilePremiumApp from "./components/MobilePremiumApp";
 import ThemeConfigurator, { PresetTheme, THEME_PRESETS } from "./components/ThemeConfigurator";

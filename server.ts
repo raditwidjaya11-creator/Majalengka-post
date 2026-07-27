@@ -943,8 +943,10 @@ async function startServer() {
       socket.emit("obs:state_update", obsBackendService.getState());
     });
 
-    // Auto-connect OBS backend service on startup
-    obsBackendService.connect().catch(() => {});
+    // Auto-connect OBS backend service on startup only if explicitly enabled
+    if (process.env.OBS_AUTOCONNECT === "true") {
+      obsBackendService.connect().catch(() => {});
+    }
 
     // Setup WebSocket Server for real-time live chat
     const wss = new WebSocketServer({ noServer: true });
