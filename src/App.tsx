@@ -27,7 +27,7 @@ import { slugify } from "./utils/slugify";
 import { safeLocalStorage } from "./lib/safeStorage";
 import { getYouTubeEmbedUrl } from "./lib/youtube";
 import { requestNotificationPermission, getNotificationPermissionStatus, showNewArticleNotification } from "./utils/notification";
-import logoImg from "./assets/images/majalengka_post_logo_1783851016975.jpg";
+import logoImg from "./assets/images/logo.png";
 import { 
   isSupabaseConfigured,
   getIsSupabaseConfigured,
