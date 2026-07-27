@@ -15,7 +15,7 @@ export const BlurImage: React.FC<BlurImageProps> = ({
   alt = "",
   className = "w-full h-full object-cover",
   containerClassName = "",
-  fallbackSrc = "/android-chrome-512x512.png"
+  fallbackSrc = "/default-news.jpg",
   showShimmer = true,
   ...props
 }) => {
