@@ -81,10 +81,10 @@ export default function HeaderNav({
           <div className="flex flex-col cursor-pointer select-none shrink-0" onClick={() => onSelectCategory("")}>
             <div className="flex items-center gap-2">
               <img
-                src={logoImg || null}
-                className="w-10 h-10 object-contain rounded-full border-2 border-red-700 bg-white shadow-sm"
-                alt="Majalengka Post Logo"
-                referrerPolicy="no-referrer"
+  src={logoImg}
+  alt="Majalengka Post Logo"
+  className="h-14 w-auto object-contain flex-shrink-0"
+  referrerPolicy="no-referrer"
               />
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-red-700 dark:text-red-500 tracking-tighter leading-none uppercase">
                 MAJALENGKA<span className="text-slate-900 dark:text-white"> POST</span>
