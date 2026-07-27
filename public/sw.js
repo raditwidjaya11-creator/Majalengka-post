@@ -1,5 +1,5 @@
 // Majalengka Post Service Worker for PWA
-const CACHE_VERSION = 'majalengkapost-v2';
+const CACHE_VERSION = 'majalengkapost-v3';
 const CACHE_NAME_STATIC = `majalengkapost-static-${CACHE_VERSION}`;
 const CACHE_NAME_IMAGES = `majalengkapost-images-${CACHE_VERSION}`;
 const CACHE_NAME_API = `majalengkapost-api-${CACHE_VERSION}`;
