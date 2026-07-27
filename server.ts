@@ -50,12 +50,18 @@ import {
   getSeoSettingsDb,
   updateSeoSettingsDb
 } from "./lib/supabase-service";
+import obsRoutes from "./server/routes/obsRoutes.js";
+import { obsBackendService } from "./server/services/obsService.js";
+import { Server as SocketIOServer } from "socket.io";
 
 const app = express();
 const PORT = parseInt(process.env.PORT || "3000", 10);
 
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+// Register OBS WebSocket API routes
+app.use("/api/obs", obsRoutes);
 
 // Serve public directory static assets (manifest, icons, images)
 app.use(express.static(path.join(process.cwd(), "public"), { maxAge: "1d" }));
@@ -912,6 +918,24 @@ async function startServer() {
 
   if (!process.env.VERCEL) {
     const server = http.createServer(app);
+
+    // Setup Socket.IO Server for OBS Realtime Events & Telemetry
+    const io = new SocketIOServer(server, {
+      cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+      },
+      path: "/socket.io"
+    });
+    obsBackendService.setSocketServer(io);
+
+    io.on("connection", (socket) => {
+      // Send current state on connection
+      socket.emit("obs:state_update", obsBackendService.getState());
+    });
+
+    // Auto-connect OBS backend service on startup
+    obsBackendService.connect().catch(() => {});
 
     // Setup WebSocket Server for real-time live chat
     const wss = new WebSocketServer({ noServer: true });
