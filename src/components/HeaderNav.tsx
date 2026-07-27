@@ -3,7 +3,7 @@ import { Search, Flame, ShieldAlert, MonitorPlay, Moon, Sun, Menu, X, Radio, New
 import { motion, AnimatePresence } from "motion/react";
 import { CATEGORIES } from "../mockData";
 import { UserRole, ValasRate, Article, InternalNotification } from "../types";
-import logoImg from "../assets/logo.png";
+import logoImg from "../assets/image/logo.png";
 
 interface HeaderNavProps {
   currentCategory: string;
