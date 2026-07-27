@@ -19,9 +19,8 @@ const STATIC_ASSETS = [
   '/favicon.png',
   '/favicon.ico',
   '/apple-touch-icon.png',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/icon-maskable.png'
+  '/android-chrome-192x192.png',
+  '/android-chrome-512x512.png'
 ];
 
 // 1. Install Event (Pre-cache static assets & skipWaiting)
