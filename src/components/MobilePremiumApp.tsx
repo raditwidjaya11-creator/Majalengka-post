@@ -16,6 +16,7 @@ import logoImg from "../assets/images/majalengka_post_logo_1783851016975.jpg";
 import { getYouTubeEmbedUrl } from "../lib/youtube";
 import Footer from "./Footer";
 import OpeningBannerModal from "./OpeningBannerModal";
+import BlurImage from "./BlurImage";
 import { safeLocalStorage } from "../lib/safeStorage";
 
 interface MobilePremiumAppProps {

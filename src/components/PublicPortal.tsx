@@ -18,6 +18,7 @@ import { getYouTubeEmbedUrl } from "../lib/youtube";
 import { safeLocalStorage } from "../lib/safeStorage";
 import ArticleSkeleton from "./ArticleSkeleton";
 import ArticleHelmet from "./ArticleHelmet";
+import BlurImage from "./BlurImage";
 
 const calculateReadingTime = (content?: string, subTitle?: string, title?: string): string => {
   const text = `${title || ""} ${subTitle || ""} ${(content || "").replace(/<[^>]*>/g, " ")}`;
@@ -671,12 +672,11 @@ export default function PublicPortal({
                       onClick={() => handleAdClick(banner)}
                       className="w-full h-full block"
                     >
-                      <img
+                      <BlurImage
                         src={banner.imageUrl || null}
                         alt={banner.title}
                         className="w-full h-full object-cover"
-                        loading="lazy"
-                        decoding="async"
+                        containerClassName="w-full h-full"
                       />
                     </a>
                     
@@ -931,12 +931,11 @@ export default function PublicPortal({
 
             {/* Cover image */}
             <div className="mb-6 rounded-xl overflow-hidden shadow-sm">
-              <img
+              <BlurImage
                 src={selectedArticle.coverImage || null}
                 alt={selectedArticle.title}
                 className="w-full object-cover max-h-[460px]"
-                loading="lazy"
-                decoding="async"
+                containerClassName="w-full max-h-[460px]"
               />
               <p className="text-[11px] text-gray-400 dark:text-gray-500 text-center py-2 bg-gray-50 dark:bg-gray-950">
                 Lokasi Liputan: {selectedArticle.location} — {selectedArticle.gpsCoords ? `GPS Coordinates: [${selectedArticle.gpsCoords.lat}, ${selectedArticle.gpsCoords.lng}]` : ""}
@@ -973,7 +972,7 @@ export default function PublicPortal({
                 <h4 className="text-sm font-bold uppercase text-gray-500 tracking-wider mb-3">Galeri Foto Kejadian</h4>
                 <div className="grid grid-cols-2 gap-3">
                   {selectedArticle.galleryImages.map((img, i) => (
-                    <img key={i} src={img || null} alt={`Galeri ${i}`} className="rounded-lg object-cover w-full h-40 border border-gray-100 dark:border-gray-800" loading="lazy" decoding="async" />
+                    <BlurImage key={i} src={img || null} alt={`Galeri ${i}`} className="rounded-lg object-cover w-full h-40 border border-gray-100 dark:border-gray-800" containerClassName="w-full h-40 rounded-lg" />
                   ))}
                 </div>
               </div>
@@ -1325,12 +1324,11 @@ export default function PublicPortal({
                         className="bg-white dark:bg-gray-950 border border-gray-100 dark:border-gray-850 rounded-xl overflow-hidden shadow-xs hover:border-red-500/40 dark:hover:border-red-500/40 hover:shadow-md transition-all duration-300 cursor-pointer flex flex-col group h-full"
                       >
                         <div className="relative overflow-hidden aspect-video">
-                          <img
+                          <BlurImage
                             src={art.coverImage || null}
                             alt={art.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                            loading="lazy"
-                            decoding="async"
+                            containerClassName="w-full h-full"
                           />
                           <span className="bg-slate-900/80 text-white font-bold text-[8px] uppercase tracking-wider px-2 py-0.5 rounded absolute bottom-2 right-2">
                             {art.category}
@@ -1551,7 +1549,7 @@ export default function PublicPortal({
             {sidebarBanner && (
               <div className="rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm">
                 <a href={sidebarBanner?.adUrl || "#"} target="_blank" rel="noreferrer">
-                  <img src={sidebarBanner.imageUrl || null} alt={sidebarBanner.title} className="w-full object-cover h-[350px]" loading="lazy" decoding="async" />
+                  <BlurImage src={sidebarBanner.imageUrl || null} alt={sidebarBanner.title} className="w-full object-cover h-[350px]" containerClassName="w-full h-[350px]" />
                 </a>
               </div>
             )}
@@ -1564,7 +1562,7 @@ export default function PublicPortal({
               <div className="space-y-4">
                 {latestArticles.slice(0, 5).map((art) => (
                   <div key={art.id} onClick={() => onSelectArticle(art)} className="flex gap-3 cursor-pointer group">
-                    <img src={art.coverImage || null} alt={art.title} className="w-16 h-16 object-cover rounded-lg shrink-0 border border-gray-100 dark:border-gray-800" loading="lazy" decoding="async" />
+                    <BlurImage src={art.coverImage || null} alt={art.title} className="w-16 h-16 object-cover rounded-lg shrink-0 border border-gray-100 dark:border-gray-800" containerClassName="w-16 h-16 shrink-0 rounded-lg" />
                     <div className="flex-1">
                       <p className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase">{art.category}</p>
                       <h5 className="text-xs font-bold text-gray-800 dark:text-gray-200 leading-tight group-hover:text-red-500 transition-colors line-clamp-2">
@@ -1587,12 +1585,11 @@ export default function PublicPortal({
           {headlineArticles.length > 0 && (
             <div className="flex flex-col md:relative md:rounded-2xl rounded-xl overflow-hidden h-auto md:h-[460px] bg-slate-950 group shadow-none border border-slate-200 dark:border-slate-850">
               <div className="w-full h-52 sm:h-64 md:h-full relative shrink-0">
-                <img
+                <BlurImage
                   src={headlineArticles[headlineIndex]?.coverImage || null}
                   alt={headlineArticles[headlineIndex]?.title}
                   className="w-full h-full object-cover opacity-90 md:opacity-85 hover:scale-[1.01] transition-transform duration-700"
-                  loading="lazy"
-                  decoding="async"
+                  containerClassName="w-full h-full"
                 />
                 {/* Gradients only on desktop */}
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent hidden md:block"></div>
@@ -1731,12 +1728,11 @@ export default function PublicPortal({
                       className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-lg overflow-hidden shadow-none hover:border-slate-400 dark:hover:border-slate-700 transition-all duration-200 cursor-pointer flex flex-col group"
                     >
                       <div className="relative overflow-hidden h-48 md:h-44">
-                        <img
+                        <BlurImage
                           src={art.coverImage || null}
                           alt={art.title}
                           className="w-full h-full object-cover group-hover:scale-104 transition-transform duration-300"
-                          loading="lazy"
-                          decoding="async"
+                          containerClassName="w-full h-full"
                         />
                         {art.isBreaking && (
                           <span className="bg-red-600 text-white font-bold text-[9px] uppercase tracking-wider px-2 py-0.5 rounded absolute top-2.5 left-2.5 shadow animate-pulse">
@@ -1995,12 +1991,11 @@ export default function PublicPortal({
                             onClick={() => onSelectArticle(art)}
                             className="flex gap-2 p-1.5 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-xl cursor-pointer transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-800 group"
                           >
-                            <img 
+                            <BlurImage 
                               src={art.coverImage || "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=150"} 
                               alt={art.title} 
                               className="w-12 h-10 object-cover rounded-lg shrink-0" 
-                              loading="lazy"
-                              decoding="async"
+                              containerClassName="w-12 h-10 shrink-0 rounded-lg"
                             />
                             <div className="flex-1 min-w-0">
                               <span className="text-[8px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-1 rounded font-bold uppercase tracking-wider">
@@ -2422,12 +2417,11 @@ export default function PublicPortal({
 
                     {/* Image */}
                     <div className="w-full aspect-[4/3] rounded-lg overflow-hidden border border-white/10 my-3 shadow-md bg-gray-800">
-                      <img
+                      <BlurImage
                         src={selectedArticle.coverImage || null}
                         alt={selectedArticle.title}
                         className="w-full h-full object-cover"
-                        loading="lazy"
-                        decoding="async"
+                        containerClassName="w-full h-full"
                       />
                     </div>
 
