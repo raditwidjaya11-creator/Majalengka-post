@@ -3,7 +3,7 @@ import { Search, Flame, ShieldAlert, MonitorPlay, Moon, Sun, Menu, X, Radio, New
 import { motion, AnimatePresence } from "motion/react";
 import { CATEGORIES } from "../mockData";
 import { UserRole, ValasRate, Article, InternalNotification } from "../types";
-import logoImg from "../assets/images/majalengka_post_logo_1783851016975.jpg";
+import logoImg from "../assets/images/android-chrome-512x512.png";
 
 interface HeaderNavProps {
   currentCategory: string;
