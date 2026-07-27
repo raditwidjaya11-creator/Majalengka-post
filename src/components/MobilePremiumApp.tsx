@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Article, AdBanner, OpeningBanner, Poll, ValasRate, Comment, MediaItem, InternalNotification } from "../types";
 import { CATEGORIES, SHOLAT_SCHEDULE, CURRENCY_RATES, STOCK_MARKET, INITIAL_COMMENTS } from "../mockData";
 import { slugify } from "../utils/slugify";
-import logoImg from "../assets/images/majalengka_post_logo_1783851016975.jpg";
+import logoImg from "../assets/images/android-chrome-512x512.png";
 import { getYouTubeEmbedUrl } from "../lib/youtube";
 import Footer from "./Footer";
 import OpeningBannerModal from "./OpeningBannerModal";
