@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Article, AdBanner, OpeningBanner, Poll, ValasRate, Comment, MediaItem, InternalNotification } from "../types";
 import { CATEGORIES, SHOLAT_SCHEDULE, CURRENCY_RATES, STOCK_MARKET, INITIAL_COMMENTS } from "../mockData";
 import { slugify } from "../utils/slugify";
-import logoImg from "../assets/logo.png";
+import logoImg from "../assets/image/logo.png";
 import { getYouTubeEmbedUrl } from "../lib/youtube";
 import Footer from "./Footer";
 import OpeningBannerModal from "./OpeningBannerModal";
